@@ -64,8 +64,10 @@
 #include "prcm44xx.h"
 #include "prm44xx.h"
 #include "prm-regbits-44xx.h"
-
-#include "pm.h"
+#include "cm.h"
+#include "prm.h"
+#include "cm44xx.h"
+#include "prcm-common.h"
 
 #ifdef CONFIG_SMP
 
@@ -150,6 +152,24 @@ static inline void clear_cpu_prev_pwrst(unsigned int cpu_id)
 
 	pwrdm_clear_all_prev_pwrst(pm_info->pwrdm);
 }
+
+struct reg_tuple {
+	void __iomem *addr;
+	u32 val;
+};
+
+static struct reg_tuple tesla_reg[] = {
+	{OMAP4430_CM_TESLA_CLKSTCTRL, 0x0},
+	{OMAP4430_CM_TESLA_TESLA_CLKCTRL, 0x0},
+	{OMAP4430_PM_TESLA_PWRSTCTRL, 0x0},
+};
+
+static struct reg_tuple ivahd_reg[] = {
+	{OMAP4430_CM_IVAHD_CLKSTCTRL, 0x0},
+	{OMAP4430_CM_IVAHD_IVAHD_CLKCTRL, 0x0},
+	{OMAP4430_CM_IVAHD_SL2_CLKCTRL, 0x0},
+	{OMAP4430_PM_IVAHD_PWRSTCTRL, 0x0}
+};
 
 /*
  * Store the SCU power status value to scratchpad memory
@@ -339,6 +359,30 @@ static inline void cpu_clear_prev_logic_pwrst(unsigned int cpu_id)
 	}
 }
 
+static inline void save_ivahd_tesla_regs(void)
+{
+	int i;
+
+	for (i = 0; i < ARRAY_SIZE(tesla_reg); i++)
+		tesla_reg[i].val = __raw_readl(tesla_reg[i].addr);
+
+	for (i = 0; i < ARRAY_SIZE(ivahd_reg); i++)
+		ivahd_reg[i].val = __raw_readl(ivahd_reg[i].addr);
+}
+
+static inline void restore_ivahd_tesla_regs(void)
+{
+	int i;
+
+	for (i = 0; i < ARRAY_SIZE(tesla_reg); i++)
+		__raw_writel(tesla_reg[i].val, tesla_reg[i].addr);
+
+	for (i = 0; i < ARRAY_SIZE(ivahd_reg); i++)
+		__raw_writel(ivahd_reg[i].val, ivahd_reg[i].addr);
+}
+
+
+
 /*
  * OMAP4 MPUSS Low Power Entry Function
  *
@@ -411,6 +455,7 @@ int omap4_enter_lowpower(unsigned int cpu, unsigned int power_state)
 			gic_save_context();
 		} else {
 			save_secure_all();
+			save_ivahd_tesla_regs();
 		}
 		save_state = 3;
 		goto cpu_prepare;
@@ -428,6 +473,7 @@ int omap4_enter_lowpower(unsigned int cpu, unsigned int power_state)
 				gic_save_context();
 			} else {
 				save_gic_wakeupgen_secure();
+				save_ivahd_tesla_regs();
 			}
 			save_state = 2;
 		}
@@ -439,6 +485,7 @@ int omap4_enter_lowpower(unsigned int cpu, unsigned int power_state)
 			gic_save_context();
 		} else {
 			save_gic_wakeupgen_secure();
+			save_ivahd_tesla_regs();
 			save_secure_ram();
 		}
 		save_state = 3;
@@ -504,6 +551,10 @@ cpu_prepare:
 		gic_cpu_enable();
 		gic_dist_enable();
 	}
+
+	if ((omap4_device_off_read_prev_state()) &&
+			(omap_type() != OMAP2_DEVICE_TYPE_GP))
+		restore_ivahd_tesla_regs();
 
 	pwrdm_post_transition();
 
