@@ -170,6 +170,9 @@ void omap4_enter_sleep(unsigned int cpu, unsigned int power_state, bool suspend)
 	if (omap4_device_off_read_prev_state()) {
 		omap4_dpll_resume_off();
 		omap4_cm_resume_off();
+#ifdef CONFIG_PM_DEBUG
+		omap4_device_off_counter++;
+#endif
 	}
 
 abort_device_off:
