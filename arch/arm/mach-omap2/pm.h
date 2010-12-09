@@ -26,6 +26,7 @@ extern void omap4_enter_sleep(unsigned int cpu, unsigned int power_state,
 				bool suspend);
 extern void omap4_trigger_ioctrl(void);
 extern void omap4_pm_off_mode_enable(int);
+extern u32 omap4_device_off_counter;
 
 #ifdef CONFIG_PM
 extern u32 omap4_is_device_off_wakeup(void);
