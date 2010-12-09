@@ -77,6 +77,9 @@
 
 /* GIC save SAR bank base */
 static struct powerdomain *mpuss_pd;
+static void __iomem *sar_bank3_base;
+static u32 max_spi_irq, max_spi_reg;
+
 /*
  * Maximum Secure memory storage size.
  */
@@ -482,6 +485,81 @@ cpu_prepare:
 
 ret:
 	return 0;
+}
+/*
+ * Save GIC context in SAR RAM. Restore is done by ROM code
+ * GIC is lost only when MPU hits OSWR or OFF. It consist
+ * of a distributor and a per-cpu interface module
+ */
+static void restore_gic(void)
+{
+	u32 reg_index, reg_value;
+
+	reg_value = readl(sar_bank3_base + ICDISER_CPU0_OFFSET);
+	writel(reg_value, gic_dist_base + GIC_DIST_ENABLE_SET);
+
+	for (reg_index = 0; reg_index < max_spi_reg; reg_index++) {
+		reg_value = readl(sar_bank3_base + ICDISER_SPI_OFFSET
+							+ 4 * reg_index);
+		writel(reg_value, gic_dist_base + 0x104 + 4 * reg_index);
+	}
+
+	/*
+	 * Interrupt Priority Registers
+	 * Secure sw accesses, last 5 bits of the 8 bits (bit[7:3] are used)
+	 * Non-Secure sw accesses, last 4 bits (i.e. bits[7:4] are used)
+	 * But the Secure Bits[7:3] are shifted by 1 in Non-Secure access.
+	 * Secure (bits[7:3] << 1)== Non Secure bits[7:4]
+	 *
+	 * SGI - backup SGI
+	 */
+	for (reg_index = 0; reg_index < 3; reg_index++) {
+		/*
+		 * Save the priority bits of the Interrupts
+		 */
+		reg_value = readl(sar_bank3_base + ICDIPR_SFI_CPU0_OFFSET
+							+ 4 * reg_index);
+		writel(reg_value, gic_dist_base + GIC_DIST_PRI
+							+ 4 * reg_index);
+	}
+	/*
+	 * PPI -  backup PPIs
+	 */
+	reg_value = readl(sar_bank3_base + ICDIPR_PPI_CPU0_OFFSET);
+	writel(reg_value, gic_dist_base + GIC_DIST_PRI + 0x1c);
+
+	/*
+	 * SPI - backup SPI
+	 * Interrupt priority regs - 4 interrupts/register
+	 */
+	for (reg_index = 0; reg_index < (max_spi_irq / 4); reg_index++) {
+		reg_value = readl(sar_bank3_base + ICDIPR_SPI_OFFSET +
+							4 * reg_index);
+		writel(reg_value, gic_dist_base +
+				(GIC_DIST_PRI + 0x20) + 4 * reg_index);
+	}
+
+	/*
+	 * Interrupt SPI TARGET - 4 interrupts/register
+	 */
+	for (reg_index = 0; reg_index < (max_spi_irq / 4); reg_index++) {
+		reg_value = readl(sar_bank3_base + ICDIPTR_SPI_OFFSET +
+							4 * reg_index);
+		writel(reg_value, gic_dist_base +
+				(GIC_DIST_TARGET + 0x20) + 4 * reg_index);
+	}
+
+	/*
+	 * Interrupt SPI Congigeration - 16 interrupts/register
+	 */
+	for (reg_index = 0; reg_index < (max_spi_irq / 16); reg_index++) {
+		reg_value = readl(sar_bank3_base + ICDICFR_OFFSET +
+							4 * reg_index);
+		writel(reg_value, gic_dist_base +
+				(GIC_DIST_CONFIG + 0x08) + 4 * reg_index);
+
+	}
+
 }
 
 static void save_l2x0_auxctrl(void)

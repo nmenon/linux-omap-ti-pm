@@ -648,7 +648,10 @@ static int option_set(void *data, u64 val)
 	if (option == &wakeup_timer_milliseconds && val >= 1000)
 		return -EINVAL;
 
-	*option = val;
+	if (cpu_is_omap44xx() && (omap_type() == OMAP2_DEVICE_TYPE_GP))
+		*option = 0;
+	else
+		*option = val;
 
 	if (option == &enable_off_mode) {
 		if (val)
@@ -711,12 +714,12 @@ static int __init pm_dbg_init(void)
 
 		}
 
-	(void) debugfs_create_file("enable_off_mode", S_IRUGO | S_IWUSR, d,
-				   &enable_off_mode, &pm_dbg_option_fops);
 	(void) debugfs_create_file("sleep_while_idle", S_IRUGO | S_IWUSR, d,
 				   &sleep_while_idle, &pm_dbg_option_fops);
 
 skip_reg_debufs:
+	(void) debugfs_create_file("enable_off_mode", S_IRUGO | S_IWUSR, d,
+				   &enable_off_mode, &pm_dbg_option_fops);
 	(void) debugfs_create_file("wakeup_timer_seconds", S_IRUGO | S_IWUSR, d,
 				   &wakeup_timer_seconds, &pm_dbg_option_fops);
 	(void) debugfs_create_file("wakeup_timer_milliseconds",

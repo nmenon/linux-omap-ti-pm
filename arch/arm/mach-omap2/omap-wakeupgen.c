@@ -309,3 +309,44 @@ void omap_wakeupgen_save(void)
 	val |= SAR_BACKUP_STATUS_WAKEUPGEN;
 	__raw_writel(val, sar_base + SAR_BACKUP_STATUS_OFFSET);
 }
+
+void omap4_wakeupgen_restore(void)
+{
+	u32 reg_value, reg_index;
+	void __iomem *sar_bank3_base;
+
+	/*
+	 * WakewupGen needs to be saved in SAR_BANK3
+	 */
+	sar_bank3_base = omap4_get_sar_ram_base() + SAR_BANK3_OFFSET;
+
+	for (reg_index = 0; reg_index < 0x4 ; reg_index++) {
+		/*
+		 * Save the CPU0/CPU1 Wakeup Enable for Interrupts 0 to 127
+		 */
+		reg_value =  readl(sar_bank3_base +
+				WAKEUPGENENB_OFFSET_CPU0 + (4 * reg_index));
+		writel(reg_value, wakeupgen_base + OMAP_WKG_ENB_A_0
+							+ (4 * reg_index));
+		reg_value = readl(sar_bank3_base +
+				WAKEUPGENENB_OFFSET_CPU1 + (4 * reg_index));
+		writel(reg_value, wakeupgen_base + OMAP_WKG_ENB_A_1
+							+ (4 * reg_index));
+	}
+
+	/*
+	 * Save AuxBoot registers
+	 */
+	reg_value =  readl(sar_bank3_base + AUXCOREBOOT0_OFFSET);
+	writel(reg_value, wakeupgen_base + OMAP_AUX_CORE_BOOT_0);
+	reg_value = readl(sar_bank3_base + AUXCOREBOOT1_OFFSET);
+	writel(reg_value, wakeupgen_base + OMAP_AUX_CORE_BOOT_0);
+
+	/*
+	 * SyncReq generation logic
+	 */
+	reg_value = readl(sar_bank3_base + PTMSYNCREQ_MASK_OFFSET);
+	writel(reg_value, wakeupgen_base + OMAP_PTMSYNCREQ_MASK);
+	reg_value = readl(sar_bank3_base + PTMSYNCREQ_EN_OFFSET);
+	writel(reg_value, wakeupgen_base + OMAP_PTMSYNCREQ_EN);
+}

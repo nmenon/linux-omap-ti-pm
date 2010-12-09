@@ -38,4 +38,5 @@
 extern int __init omap_wakeupgen_init(void);
 extern void omap_wakeupgen_irqmask_all(unsigned int cpu, unsigned int set);
 extern void omap_wakeupgen_save(void);
+extern void omap4_wakeupgen_restore(void);
 #endif
