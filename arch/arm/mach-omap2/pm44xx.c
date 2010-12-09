@@ -169,6 +169,9 @@ void omap4_enter_sleep(unsigned int cpu, unsigned int power_state, bool suspend)
 	if (omap4_device_off_read_prev_state()) {
 		omap4_dpll_resume_off();
 		omap4_cm_resume_off();
+#ifdef CONFIG_PM_DEBUG
+		omap4_device_off_counter++;
+#endif
 	}
 
 	if (core_next_state < PWRDM_POWER_ON) {
@@ -487,7 +490,7 @@ void omap4_pm_off_mode_enable(int enable)
 			pwrst->next_state = PWRDM_POWER_RET;
 		else
 			pwrst->next_state = state;
-		omap_set_pwrdm_state(pwrst->pwrdm, state);
+		omap_set_pwrdm_state(pwrst->pwrdm, pwrst->next_state);
 	}
 }
 
