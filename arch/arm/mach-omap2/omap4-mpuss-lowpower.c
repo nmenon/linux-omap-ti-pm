@@ -127,6 +127,7 @@ u32 gic_cpu_read(u32 reg)
 
 #define NR_TESLA_REGS				3
 #define NR_IVAHD_REGS				4
+#define NR_L3INSTR_REGS				3
 
 /*
  * Set the CPUx powerdomain's previous power state
@@ -174,6 +175,12 @@ struct tuple ivahd_reg[NR_IVAHD_REGS] = {
 	{OMAP4430_CM_IVAHD_IVAHD_CLKCTRL, 0x0},
 	{OMAP4430_CM_IVAHD_SL2_CLKCTRL, 0x0},
 	{OMAP4430_PM_IVAHD_PWRSTCTRL, 0x0}
+};
+
+struct tuple l3instr_reg[NR_L3INSTR_REGS] = {
+	{OMAP4430_CM_L3INSTR_L3_3_CLKCTRL, 0x0},
+	{OMAP4430_CM_L3INSTR_L3_INSTR_CLKCTRL, 0x0},
+	{OMAP4430_CM_L3INSTR_OCP_WP1_CLKCTRL, 0x0},
 };
 
 /*
@@ -297,6 +304,21 @@ static void save_gic_wakeupgen_secure(void)
 		pr_debug("GIC and Wakeupgen context save failed\n");
 }
 
+static inline void save_l3instr_regs(void)
+{
+	int i;
+
+	for (i = 0; i < NR_L3INSTR_REGS; i++)
+		l3instr_reg[i].val = __raw_readl(l3instr_reg[i].addr);
+}
+
+static inline void restore_l3instr_regs(void)
+{
+	int i;
+
+	for (i = 0; i < NR_L3INSTR_REGS; i++)
+		__raw_writel(l3instr_reg[i].val, l3instr_reg[i].addr);
+}
 
 
 /*
@@ -462,6 +484,7 @@ int omap4_enter_lowpower(unsigned int cpu, unsigned int power_state)
 		} else {
 			save_secure_all();
 			save_ivahd_tesla_regs();
+			save_l3instr_regs();
 		}
 		save_state = 3;
 		goto cpu_prepare;
@@ -480,6 +503,7 @@ int omap4_enter_lowpower(unsigned int cpu, unsigned int power_state)
 			} else {
 				save_gic_wakeupgen_secure();
 				save_ivahd_tesla_regs();
+				save_l3instr_regs();
 			}
 			save_state = 2;
 		}
@@ -492,6 +516,7 @@ int omap4_enter_lowpower(unsigned int cpu, unsigned int power_state)
 		} else {
 			save_gic_wakeupgen_secure();
 			save_ivahd_tesla_regs();
+			save_l3instr_regs();
 			save_secure_ram();
 		}
 		save_state = 3;
@@ -559,8 +584,10 @@ cpu_prepare:
 	}
 
 	if ((omap4_device_off_read_prev_state()) &&
-			(omap_type() != OMAP2_DEVICE_TYPE_GP))
+			(omap_type() != OMAP2_DEVICE_TYPE_GP)) {
 		restore_ivahd_tesla_regs();
+		restore_l3instr_regs();
+	}
 
 	pwrdm_post_transition();
 
