@@ -19,6 +19,7 @@ obj-$(CONFIG_PNP)		+= pnp/
 obj-$(CONFIG_ARM_AMBA)		+= amba/
 
 obj-$(CONFIG_VIRTIO)		+= virtio/
+obj-$(CONFIG_RPMSG)		+= rpmsg/
 obj-$(CONFIG_XEN)		+= xen/
 
 # regulators early, since some subsystems rely on them to initialize
