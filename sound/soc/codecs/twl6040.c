@@ -1504,6 +1504,7 @@ static int twl6040_probe(struct snd_soc_codec *codec)
 	priv->headset_mode = 1;
 	priv->sysclk_constraints = &hp_constraints;
 	priv->workqueue = create_singlethread_workqueue("twl6040-codec");
+	priv->sysclk_constraints = &lp_constraints;
 
 	if (!priv->workqueue) {
 		ret = -ENOMEM;
