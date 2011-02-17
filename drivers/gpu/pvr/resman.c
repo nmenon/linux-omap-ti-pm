@@ -28,10 +28,6 @@
 #include "resman.h"
 
 #ifdef __linux__
-#ifndef AUTOCONF_INCLUDED
- #include <linux/config.h>
-#endif
-
 #include <linux/version.h>
 #include <linux/sched.h>
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,9)
@@ -46,7 +42,7 @@
 #include <asm/semaphore.h>
 #endif
 
-static DECLARE_MUTEX(lock);
+static DEFINE_SEMAPHORE(lock);
 
 #define ACQUIRE_SYNC_OBJ  do {							\
 		if (in_interrupt()) { 							\
