@@ -24,10 +24,6 @@
  *
  ******************************************************************************/
 
-#ifndef AUTOCONF_INCLUDED
-#include <linux/config.h>
-#endif
-
 #include <linux/version.h>
 
 #include <asm/atomic.h>
@@ -205,7 +201,7 @@ static void WorkQueueHandler(struct work_struct *psWork)
 OMAPLFB_ERROR OMAPLFBCreateSwapQueue(OMAPLFB_SWAPCHAIN *psSwapChain)
 {
 	
-	psSwapChain->psWorkQueue = __create_workqueue(DEVNAME, 1, 1, 1);
+	psSwapChain->psWorkQueue = alloc_ordered_workqueue(DEVNAME, WQ_NON_REENTRANT | WQ_FREEZABLE | WQ_HIGHPRI);
 	if (psSwapChain->psWorkQueue == NULL)
 	{
 		printk(KERN_WARNING DRIVER_PREFIX ": %s: Device %u: create_singlethreaded_workqueue failed\n", __FUNCTION__, psSwapChain->uiFBDevID);
@@ -232,7 +228,7 @@ void OMAPLFBFlip(OMAPLFB_DEVINFO *psDevInfo, OMAPLFB_BUFFER *psBuffer)
 	int res;
 	unsigned long ulYResVirtual;
 
-	acquire_console_sem();
+	console_lock();
 
 	sFBVar = psDevInfo->psLINFBInfo->var;
 
@@ -264,7 +260,7 @@ void OMAPLFBFlip(OMAPLFB_DEVINFO *psDevInfo, OMAPLFB_BUFFER *psBuffer)
 		}
 	}
 
-	release_console_sem();
+	console_unlock();
 }
 
 OMAPLFB_UPDATE_MODE OMAPLFBGetUpdateMode(OMAPLFB_DEVINFO *psDevInfo)
@@ -436,9 +432,9 @@ OMAPLFB_ERROR OMAPLFBUnblankDisplay(OMAPLFB_DEVINFO *psDevInfo)
 {
 	int res;
 
-	acquire_console_sem();
+	console_lock();
 	res = fb_blank(psDevInfo->psLINFBInfo, 0);
-	release_console_sem();
+	console_unlock();
 	if (res != 0 && res != -EINVAL)
 	{
 		printk(KERN_WARNING DRIVER_PREFIX
@@ -453,9 +449,9 @@ OMAPLFB_ERROR OMAPLFBUnblankDisplay(OMAPLFB_DEVINFO *psDevInfo)
 
 static void OMAPLFBBlankDisplay(OMAPLFB_DEVINFO *psDevInfo)
 {
-	acquire_console_sem();
+	console_lock();
 	fb_blank(psDevInfo->psLINFBInfo, 1);
-	release_console_sem();
+	console_unlock();
 }
 
 static void OMAPLFBEarlySuspendHandler(struct early_suspend *h)
@@ -686,9 +682,9 @@ int PVR_DRM_MAKENAME(DISPLAY_CONTROLLER, _Ioctl)(struct drm_device unref__ *dev,
 				flush_workqueue(psDevInfo->psSwapChain->psWorkQueue);
 			}
 
-			acquire_console_sem();
+			console_lock();
 			ret = fb_blank(psDevInfo->psLINFBInfo, iFBMode);
-			release_console_sem();
+			console_unlock();
 
 			OMAPLFBCreateSwapChainUnLock(psDevInfo);
 
