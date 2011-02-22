@@ -769,17 +769,21 @@ static struct omap_dss_device sdp4430_lcd_device = {
 		.data1_pol	= 0,
 		.data2_lane	= 3,
 		.data2_pol	= 0,
-		.div		= {
+	},
+
+	.clocks = {
+		.dispc = {
+			.lck_div	= 1,	/* Logic Clock = 172.8 MHz */
+			.pck_div	= 5,	/* Pixel Clock = 34.56 MHz */
+		},
+
+		.dsi = {
 			.regn		= 16,	/* Fint = 2.4 MHz */
 			.regm		= 180,	/* DDR Clock = 216 MHz */
 			.regm_dispc	= 5,	/* PLL1_CLK1 = 172.8 MHz */
 			.regm_dsi	= 5,	/* PLL1_CLK2 = 172.8 MHz */
 
 			.lp_clk_div	= 10,	/* LP Clock = 8.64 MHz */
-
-			.lck_div	= 1,	/* Logic Clock = 172.8 MHz */
-			.pck_div	= 5,	/* Pixel Clock = 34.56 MHz */
-
 		},
 	},
 	.channel		= OMAP_DSS_CHANNEL_LCD,
