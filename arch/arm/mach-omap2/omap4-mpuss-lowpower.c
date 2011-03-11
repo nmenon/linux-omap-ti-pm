@@ -577,6 +577,7 @@ cpu_prepare:
 
 	if ((omap4_device_off_read_prev_state()) &&
 			(omap_type() != OMAP2_DEVICE_TYPE_GP)) {
+		omap4_secure_dispatcher(0x21, 4, 0, 0, 0, 0, 0);
 		restore_ivahd_tesla_regs();
 		restore_l3instr_regs();
 	}
