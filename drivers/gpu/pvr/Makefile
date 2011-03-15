@@ -117,4 +117,3 @@ omaplfb-y := \
 
 obj-$(CONFIG_PVR_SGX) += pvrsrvkm.o
 obj-$(CONFIG_PVR_SGX) += omaplfb.o
-obj-$(CONFIG_PVR_PDUMP) += dbgdrv/
