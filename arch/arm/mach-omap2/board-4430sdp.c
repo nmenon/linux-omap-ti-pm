@@ -753,7 +753,7 @@ static struct nokia_dsi_panel_data dsi1_panel = {
 		.reset_gpio	= 102,
 		.use_ext_te	= false,
 		.ext_te_gpio	= 101,
-		.use_esd_check	= false,
+		.esd_interval	= 0,
 		.set_backlight	= dsi1_panel_set_backlight,
 };
 
