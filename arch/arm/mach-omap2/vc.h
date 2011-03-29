@@ -53,6 +53,7 @@ struct omap_vc_common {
 	u8 cmd_onlp_shift;
 	u8 cmd_ret_shift;
 	u8 cmd_off_shift;
+	u8 cfg_channel_reg;
 };
 
 /**
@@ -66,6 +67,7 @@ struct omap_vc_channel {
 	u8 i2c_slave_addr;
 	u8 volt_reg_addr;
 	u8 cmd_reg_addr;
+	u8 cfg_channel;
 	u16 setup_time;
 
 	/* register access data */
@@ -74,6 +76,7 @@ struct omap_vc_channel {
 	u32 smps_volra_mask;
 	u32 smps_cmdra_mask;
 	u8 cmdval_reg;
+	u8 cfg_channel_sa_shift;
 };
 
 extern struct omap_vc_channel omap3_vc_mpu;
