@@ -1631,6 +1631,7 @@ static int soc_probe_dai_link(struct snd_soc_card *card, int num)
 	if (!platform->probed) {
 		if (!try_module_get(platform->dev->driver->owner))
 			return -ENODEV;
+		platform->card = card;
 
 		if (platform->driver->probe) {
 			ret = platform->driver->probe(platform);
