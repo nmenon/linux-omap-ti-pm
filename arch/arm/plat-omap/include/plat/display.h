@@ -422,8 +422,13 @@ struct omap_dss_device {
 
 	struct {
 		struct {
-			u16 lck_div;
-			u16 pck_div;
+			struct {
+				u16 lck_div;
+				u16 pck_div;
+				enum omap_dss_clk_source lcd_clk_src;
+			} channel;
+
+			enum omap_dss_clk_source dispc_fclk_src;
 		} dispc;
 
 		struct {
@@ -433,6 +438,7 @@ struct omap_dss_device {
 			u16 regm_dsi;
 
 			u16 lp_clk_div;
+			enum omap_dss_clk_source dsi_fclk_src;
 		} dsi;
 	} clocks;
 
