@@ -1041,6 +1041,91 @@ bool omap_dvfs_is_any_dev_scaling(void)
 }
 EXPORT_SYMBOL(omap_dvfs_is_any_dev_scaling);
 
+/**
+ * omap_dvfs_pause() - Pause the dvfs transition for this domain
+ * @voltdom: voltage domain to pause
+ * @trylock: should we return if we dvfs already in transition
+ *	     for this domain
+ *
+ * To ensure that the system accesses to internal registers of OMAP
+ * modules are made safe, we need to ensure exclusivity of access
+ * these module drivers request pause of the domain transition while
+ * they finish off their work. The users should ensure sanity
+ * between usual dvfs paths Vs usage of these APIs to prevent deadlocks
+ *
+ * Returns 0 if dvfs has been paused for the domain or return 1 if trylock
+ * and lock contention, else returns err val
+ */
+int omap_dvfs_pause(struct voltagedomain *voltdm, bool trylock)
+{
+	struct omap_vdd_dvfs_info *dvfs_info;
+	int r = 0;
+
+	if (!voltdm) {
+		pr_err("%s: bad voltagedomain\n", __func__);
+		return -EINVAL;
+	}
+	dvfs_info = _voltdm_to_dvfs_info(voltdm);
+	if (IS_ERR_OR_NULL(dvfs_info)) {
+		pr_err("%s: no dvfsinfo for voltdm %s\n",
+			__func__, voltdm->name);
+		return -ENODEV;
+	}
+
+	if (trylock)
+		r = !mutex_trylock(&omap_dvfs_lock);
+	else
+		mutex_lock(&omap_dvfs_lock);
+	if (r)
+		return r;
+
+	/* Mark done */
+	dvfs_info->is_scaling = true;
+	/* let the other CPU know as well */
+	smp_wmb();
+
+	return 0;
+}
+EXPORT_SYMBOL(omap_dvfs_pause);
+
+/**
+ * omap_dvfs_unpause() - Free up the dvfs transitions for this domain
+ * @voltdom: voltage domain to unpause
+ *
+ * In the cases where omap_vscale_pause operations are called, unpause
+ * is used to free up the sequences
+ */
+int omap_dvfs_unpause(struct voltagedomain *voltdm)
+{
+	struct omap_vdd_dvfs_info *dvfs_info;
+
+	if (!voltdm) {
+		pr_err("%s: bad voltagedomain\n", __func__);
+		return -EINVAL;
+	}
+	dvfs_info = _voltdm_to_dvfs_info(voltdm);
+	if (IS_ERR_OR_NULL(dvfs_info)) {
+		pr_err("%s: no dvfsinfo for voltdm %s\n",
+			__func__, voltdm->name);
+		return -ENODEV;
+	}
+	if (!dvfs_info->is_scaling || !mutex_is_locked(&omap_dvfs_lock)) {
+		pr_err("%s: unpaired call sequence voltdm %s!\n",
+			__func__, voltdm->name);
+		return -EINVAL;
+	}
+
+	/* Mark done */
+	dvfs_info->is_scaling = false;
+	/* let the other CPU know as well */
+	smp_wmb();
+
+	mutex_unlock(&omap_dvfs_lock);
+
+	return 0;
+}
+EXPORT_SYMBOL(omap_dvfs_unpause);
+
 #ifdef CONFIG_PM_DEBUG
 static int dvfs_dump_vdd(struct seq_file *sf, void *unused)
 {
