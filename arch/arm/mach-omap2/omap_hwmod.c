@@ -1226,7 +1226,8 @@ static int _enable(struct omap_hwmod *oh)
 
 	if (oh->_state != _HWMOD_STATE_INITIALIZED &&
 	    oh->_state != _HWMOD_STATE_IDLE &&
-	    oh->_state != _HWMOD_STATE_DISABLED) {
+	    oh->_state != _HWMOD_STATE_DISABLED &&
+	    oh->_state != _HWMOD_STATE_ENABLED) {
 		WARN(1, "omap_hwmod: %s: enabled state can only be entered "
 		     "from initialized, idle, or disabled state\n", oh->name);
 		return -EINVAL;
