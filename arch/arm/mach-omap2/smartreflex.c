@@ -906,7 +906,7 @@ static int __init omap_sr_probe(struct platform_device *pdev)
 	vdd_dbg_dir = omap_voltage_get_dbgdir(sr_info->voltdm);
 	if (!vdd_dbg_dir) {
 		ret = -EINVAL;
-		goto err_release_region;
+		goto err_iounmap;
 	}
 
 	sr_info->dbg_dir = debugfs_create_dir("smartreflex", vdd_dbg_dir);
@@ -914,7 +914,7 @@ static int __init omap_sr_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "%s: Unable to create debugfs directory\n",
 			__func__);
 		ret = PTR_ERR(sr_info->dbg_dir);
-		goto err_release_region;
+		goto err_iounmap;
 	}
 
 	(void) debugfs_create_file("autocomp", S_IRUGO | S_IWUSR,
@@ -931,7 +931,7 @@ static int __init omap_sr_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "%s: Unable to create debugfs directory"
 			"for n-values\n", __func__);
 		ret = PTR_ERR(nvalue_dir);
-		goto err_release_region;
+		goto err_iounmap;
 	}
 
 	omap_voltage_get_volttable(sr_info->voltdm, &volt_data);
@@ -941,7 +941,7 @@ static int __init omap_sr_probe(struct platform_device *pdev)
 			"entries for n-values\n",
 			__func__, sr_info->voltdm->name);
 		ret = -ENODATA;
-		goto err_release_region;
+		goto err_iounmap;
 	}
 
 	for (i = 0; i < sr_info->nvalue_count; i++) {
@@ -955,6 +955,8 @@ static int __init omap_sr_probe(struct platform_device *pdev)
 
 	return ret;
 
+err_iounmap:
+	iounmap(sr_info->base);
 err_release_region:
 	release_mem_region(mem->start, resource_size(mem));
 err_free_devinfo:
