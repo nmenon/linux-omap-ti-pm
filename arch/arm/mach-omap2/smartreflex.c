@@ -931,7 +931,7 @@ static int __init omap_sr_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "%s: Unable to create debugfs directory"
 			"for n-values\n", __func__);
 		ret = PTR_ERR(nvalue_dir);
-		goto err_iounmap;
+		goto err_debugfs;
 	}
 
 	omap_voltage_get_volttable(sr_info->voltdm, &volt_data);
@@ -941,7 +941,7 @@ static int __init omap_sr_probe(struct platform_device *pdev)
 			"entries for n-values\n",
 			__func__, sr_info->voltdm->name);
 		ret = -ENODATA;
-		goto err_iounmap;
+		goto err_debugfs;
 	}
 
 	for (i = 0; i < sr_info->nvalue_count; i++) {
@@ -955,6 +955,8 @@ static int __init omap_sr_probe(struct platform_device *pdev)
 
 	return ret;
 
+err_debugfs:
+	debugfs_remove_recursive(sr_info->dbg_dir);
 err_iounmap:
 	list_del(&sr_info->node);
 	iounmap(sr_info->base);
