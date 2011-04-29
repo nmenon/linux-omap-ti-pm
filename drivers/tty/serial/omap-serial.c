@@ -1184,6 +1184,13 @@ static int serial_omap_suspend(struct device *dev)
 		uart_suspend_port(&serial_omap_reg, &up->port);
 		console_trylock();
 		serial_omap_pm(&up->port, 3, 0);
+
+		/* OMAP2 dont have async wakeup from prcm.
+		 * For such socs clocks will be kept active from probe and
+		 * cut only in suspend path.
+		 */
+		if (!up->has_async_wake)
+			serial_omap_port_disable(up);
 	}
 	return 0;
 }
@@ -1195,6 +1202,9 @@ static int serial_omap_resume(struct device *dev)
 	if (up) {
 		uart_resume_port(&serial_omap_reg, &up->port);
 		console_unlock();
+
+		if (!up->has_async_wake)
+			serial_omap_port_enable(up);
 	}
 
 	return 0;
@@ -1415,6 +1425,7 @@ static int serial_omap_probe(struct platform_device *pdev)
 	up->enable_wakeup = omap_up_info->enable_wakeup;
 	up->wer = omap_up_info->wer;
 	up->chk_wakeup = omap_up_info->chk_wakeup;
+	up->has_async_wake = omap_up_info->has_async_wake;
 
 	if (omap_up_info->use_dma) {
 		up->uart_dma.uart_dma_tx = dma_tx->start;
@@ -1442,6 +1453,9 @@ static int serial_omap_probe(struct platform_device *pdev)
 		serial_omap_port_enable(up);
 		serial_omap_port_disable(up);
 	}
+
+	if (!up->has_async_wake)
+		serial_omap_port_enable(up);
 
 	ui[pdev->id] = up;
 	serial_omap_add_console_port(up);

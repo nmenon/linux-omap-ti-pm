@@ -83,6 +83,7 @@ struct omap_uart_port_info {
 	void __iomem *wk_st;
 	void __iomem *wk_en;
 	u32 wk_mask;
+	bool			has_async_wake;
 };
 
 struct uart_omap_dma {
@@ -139,5 +140,7 @@ struct uart_omap_port {
 	unsigned int		errata;
 	void (*enable_wakeup)(struct platform_device *, bool);
 	bool (*chk_wakeup)(struct platform_device *);
+
+	bool			has_async_wake;
 };
 #endif /* __OMAP_SERIAL_H__ */

@@ -249,6 +249,7 @@ static void omap_uart_idle_init(struct omap_uart_port_info *uart,
 {
 	if (cpu_is_omap44xx()) {
 		uart->wer |= OMAP4_UART_WER_MOD_WKUP;
+		uart->has_async_wake = true;
 	} else if (cpu_is_omap34xx()) {
 		u32 mod = num > 1 ? OMAP3430_PER_MOD : CORE_MOD;
 		u32 wk_mask = 0;
@@ -271,6 +272,7 @@ static void omap_uart_idle_init(struct omap_uart_port_info *uart,
 			break;
 		}
 		uart->wk_mask = wk_mask;
+		uart->has_async_wake = true;
 	} else if (cpu_is_omap24xx()) {
 		u32 wk_mask = 0;
 		u32 wk_en = PM_WKEN1, wk_st = PM_WKST1;
