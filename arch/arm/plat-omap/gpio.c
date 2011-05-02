@@ -30,6 +30,8 @@
 #include <mach/gpio.h>
 #include <asm/mach/irq.h>
 
+#include <plat/omap_device.h>
+
 /*
  * OMAP1510 GPIO registers
  */
@@ -1861,6 +1863,7 @@ void omap2_gpio_prepare_for_idle(int off_mode)
 {
 	int i, c = 0;
 	int min = 0;
+	struct platform_device *pdev;
 
 	if (cpu_is_omap34xx())
 		min = 1;
@@ -1872,6 +1875,9 @@ void omap2_gpio_prepare_for_idle(int off_mode)
 
 		for (j = 0; j < hweight_long(bank->dbck_enable_mask); j++)
 			clk_disable(bank->dbck);
+
+		 pdev = to_platform_device(bank->dev);
+		 omap_device_idle(pdev);
 
 		if (!off_mode)
 			continue;
@@ -1930,6 +1936,7 @@ void omap2_gpio_resume_after_idle(void)
 {
 	int i;
 	int min = 0;
+	struct platform_device *pdev;
 
 	if (cpu_is_omap34xx())
 		min = 1;
@@ -1937,6 +1944,9 @@ void omap2_gpio_resume_after_idle(void)
 		struct gpio_bank *bank = &gpio_bank[i];
 		u32 l = 0, gen, gen0, gen1;
 		int j;
+
+		pdev = to_platform_device(bank->dev);
+		omap_device_enable(pdev);
 
 		for (j = 0; j < hweight_long(bank->dbck_enable_mask); j++)
 			clk_enable(bank->dbck);
