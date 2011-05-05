@@ -117,6 +117,8 @@ int omap_device_enable_hwmods(struct omap_device *od);
 int omap_device_disable_clocks(struct omap_device *od);
 int omap_device_enable_clocks(struct omap_device *od);
 
+int omap_device_enable_ioring_wakeup(struct platform_device *pdev);
+int omap_device_disable_ioring_wakeup(struct platform_device *pdev);
 
 /*
  * Entries should be kept in latency order ascending

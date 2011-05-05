@@ -780,6 +780,62 @@ void __iomem *omap_device_get_rt_va(struct omap_device *od)
 	return omap_hwmod_get_mpu_rt_va(od->hwmods[0]);
 }
 
+/**
+ * omap_device_enable_ioring_wakeup - Set wakeup bit for iopad ring.
+ * @pdev: platform_device for which wakeup needs to be set.
+ *
+ * Caller should ensure this is called if device_may_wakeup(dev) is true
+ * traverse through each hwmod and check each available pads
+ * if pad is enabled then set wakeup enable flag for the mux pin.
+ * Return error if pads are not enabled or not available.
+ * Wakeup enable flag will be we used during hwmod idle transistion.
+ */
+int omap_device_enable_ioring_wakeup(struct platform_device *pdev)
+{
+	int ret = -EINVAL, i;
+	struct omap_device *od;
+	struct omap_hwmod *oh;
+
+	if (!pdev)
+		return ret;
+
+	od = _find_by_pdev(pdev);
+	for (i = 0; i < od->hwmods_cnt; i++) {
+		oh = od->hwmods[i];
+		ret = omap_hwmod_enable_ioring_wakeup(oh);
+	}
+
+	return ret;
+}
+
+/**
+ * omap_device_disable_ioring_wakeup - Clear wakeup bit for iopad ring.
+ * @pdev: platform_device for which wakeup needs to be cleared.
+ *
+ * Caller should ensure this is called if device_may_wakeup(dev) is false
+ * traverse through each hwmod and check each available pads
+ * if pad is enabled then clear wakeup enable flag for the mux pin.
+ * Return error if pads are not enabled or not available.
+ * Wakeup enable flag will be we used during hwmod idle transistion.
+ */
+int omap_device_disable_ioring_wakeup(struct platform_device *pdev)
+{
+	int ret = -EINVAL, i;
+	struct omap_device *od;
+	struct omap_hwmod *oh;
+
+	if (!pdev)
+		return ret;
+
+	od = _find_by_pdev(pdev);
+	for (i = 0; i < od->hwmods_cnt; i++) {
+		oh = od->hwmods[i];
+		ret = omap_hwmod_disable_ioring_wakeup(oh);
+	}
+
+	return ret;
+}
+
 /*
  * Public functions intended for use in omap_device_pm_latency
  * .activate_func and .deactivate_func function pointers
