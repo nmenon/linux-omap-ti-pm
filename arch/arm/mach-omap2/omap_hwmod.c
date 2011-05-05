@@ -2462,3 +2462,17 @@ int omap_hwmod_disable_ioring_wakeup(struct omap_hwmod *oh)
 	/* Disable pad wakeup capability */
 	return omap_hwmod_set_ioring_wakeup(oh, false);
 }
+
+/**
+ * omap_hwmod_pad_get_wakeup_status - get pad wakeup status if mux is available.
+ * @oh: struct omap_hwmod *
+ *
+ * Returns the wake_up status bit of available pad mux pin.
+ * return error if no mux pads are available.
+ */
+int omap_hmwod_pad_get_wakeup_status(struct omap_hwmod *oh)
+{
+	if (oh && oh->mux)
+		return omap_hwmod_mux_get_wake_status(oh->mux);
+	return -EINVAL;
+}
