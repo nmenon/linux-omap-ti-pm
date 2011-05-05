@@ -295,6 +295,7 @@ static irqreturn_t prcm_interrupt_handler (int irq, void *dev_id)
 
 	/* Check if a IO_ST interrupt */
 	if (irqstatus_mpu & OMAP4430_IO_ST_MASK) {
+		omap_uart_resume_idle();
 		omap4_trigger_ioctrl();
 	}
 
