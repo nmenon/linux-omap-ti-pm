@@ -49,6 +49,15 @@ static struct omap_vc_common omap3_vc_common = {
 	.i2c_mcode_mask	 = OMAP3430_MCODE_MASK,
 };
 
+/* for all channels */
+struct omap_vc_channel_cfg vc3xxx_common_cfg_channel = {
+	.sa = CFG_CHANNEL_SA,
+	.rav = CFG_CHANNEL_RAV,
+	.rac = CFG_CHANNEL_RAC,
+	.racen = CFG_CHANNEL_RACEN,
+	.cmd = CFG_CHANNEL_CMD,
+};
+
 struct omap_vc_channel omap3_vc_mpu = {
 	.common = &omap3_vc_common,
 	.cmdval_reg = OMAP3_PRM_VC_CMD_VAL_0_OFFSET,
@@ -56,6 +65,7 @@ struct omap_vc_channel omap3_vc_mpu = {
 	.smps_volra_mask = OMAP3430_VOLRA0_MASK,
 	.smps_cmdra_mask = OMAP3430_CMDRA0_MASK,
 	.cfg_channel_sa_shift = OMAP3430_PRM_VC_SMPS_SA_SA0_SHIFT,
+	.cfg_ch_bits = &vc3xxx_common_cfg_channel,
 };
 
 struct omap_vc_channel omap3_vc_core = {
@@ -65,4 +75,5 @@ struct omap_vc_channel omap3_vc_core = {
 	.smps_volra_mask = OMAP3430_VOLRA1_MASK,
 	.smps_cmdra_mask = OMAP3430_CMDRA1_MASK,
 	.cfg_channel_sa_shift = OMAP3430_PRM_VC_SMPS_SA_SA1_SHIFT,
+	.cfg_ch_bits = &vc3xxx_common_cfg_channel,
 };
