@@ -109,6 +109,15 @@ struct omap_volt_data {
 	u8	vp_errgain;
 };
 
+/*
+ * Introduced in OMAP4, is a concept of a default channe - in OMAP4, this
+ * channel is MPU, all other domains such as IVA/CORE, could optionally
+ * link their i2c reg configuration to use MPU channel's configuration if
+ * required. To do this, mark in the PMIC structure's
+ * i2c_slave_addr/volt_reg_addr/cmd_reg_addr with this macro.
+ */
+#define USE_DEFAULT_CHANNEL_I2C_PARAM	0x10000
+
 /**
  * struct omap_voltdm_pmic - PMIC specific data required by voltage driver.
  * @slew_rate:	PMIC slew rate (in uv/us)

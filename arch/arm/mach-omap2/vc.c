@@ -22,20 +22,20 @@
  * - command values for ON, ONLP, RET and OFF (CMD)
  *
  * This function currently only allows flexible configuration of
- * the non-default channel (e.g. non-zero channels.)  Starting with
- * OMAP4, only the non-zero channels can be configured.  Channel zero
- * always uses the channel zero register values.  Therefore, the
- * same limitation is imposed on OMAP3 for consistency.
+ * the non-default channels.  Introduced in OMAP4, is a concept of a default
+ * channel - in OMAP4, this channel is MPU, all other domains could optionally
+ * link their i2c regs to use MPU channel's configuration if required.
  */
 static int omap_vc_config_channel(struct voltagedomain *voltdm)
 {
 	struct omap_vc_channel *vc = voltdm->vc;
 
 	/*
-	 * For channel zero, the only configurable bit is RACEN.
-	 * All others must stay at zero (see function comment above.)
+	 * For default channel, the only configurable bit is RACEN.
+	 * All others default channel bits stays at zero
+	 * (see function comment above.)
 	 */
-	if (!vc->cfg_channel_sa_shift)
+	if (vc->is_default_channel)
 		vc->cfg_channel &= CFG_CHANNEL_RACEN;
 
 	voltdm->rmw(CFG_CHANNEL_MASK << vc->cfg_channel_sa_shift,
@@ -261,6 +261,18 @@ void __init omap_vc_init_channel(struct voltagedomain *voltdm)
 	}
 	cfg_channel_data = vc->cfg_ch_bits;
 
+	/* Dont proceed if channel configurations are messed up */
+	if (vc->is_default_channel &&
+		(vc->i2c_slave_addr == USE_DEFAULT_CHANNEL_I2C_PARAM ||
+		 vc->cmd_reg_addr == USE_DEFAULT_CHANNEL_I2C_PARAM ||
+		 vc->volt_reg_addr == USE_DEFAULT_CHANNEL_I2C_PARAM)) {
+		pr_err("%s: Voltage Domain %s is default.INVALID CONFIGURATION:"
+			"slave_add = %04x cmd=%04x vol=%04x!\n",
+			__func__, voltdm->name, vc->i2c_slave_addr,
+			vc->cmd_reg_addr, vc->volt_reg_addr);
+		return;
+	}
+
 	vc->cfg_channel = 0;
 
 	/* get PMIC/board specific settings */
@@ -269,26 +281,33 @@ void __init omap_vc_init_channel(struct voltagedomain *voltdm)
 	vc->cmd_reg_addr = voltdm->pmic->cmd_reg_addr;
 	vc->setup_time = voltdm->pmic->volt_setup_time;
 
-	/* Configure the i2c slave address for this VC */
-	voltdm->rmw(vc->smps_sa_mask,
-		    vc->i2c_slave_addr << __ffs(vc->smps_sa_mask),
-		    vc->common->smps_sa_reg);
-	vc->cfg_channel |= cfg_channel_data->sa;
+	/* Configure the I2C slave address for this VC */
+	if (vc->i2c_slave_addr != USE_DEFAULT_CHANNEL_I2C_PARAM) {
+		voltdm->rmw(vc->smps_sa_mask,
+			    vc->i2c_slave_addr << __ffs(vc->smps_sa_mask),
+			    vc->common->smps_sa_reg);
+		vc->cfg_channel |= cfg_channel_data->sa;
+	}
 
 	/*
 	 * Configure the PMIC register addresses.
 	 */
-	voltdm->rmw(vc->smps_volra_mask,
-		    vc->volt_reg_addr << __ffs(vc->smps_volra_mask),
-		    vc->common->smps_volra_reg);
-	vc->cfg_channel |= cfg_channel_data->rav;
-
-	if (vc->cmd_reg_addr) {
+	if (vc->cmd_reg_addr != USE_DEFAULT_CHANNEL_I2C_PARAM) {
 		voltdm->rmw(vc->smps_cmdra_mask,
 			    vc->cmd_reg_addr << __ffs(vc->smps_cmdra_mask),
 			    vc->common->smps_cmdra_reg);
-		vc->cfg_channel |= cfg_channel_data->rac |
-					cfg_channel_data->racen;
+		vc->cfg_channel |= cfg_channel_data->rac;
+	}
+
+	/* if voltage and cmd regs are same, we can use cmdra register */
+	if (vc->volt_reg_addr == vc->cmd_reg_addr) {
+		vc->cfg_channel |= cfg_channel_data->racen;
+	}
+	if (vc->volt_reg_addr != USE_DEFAULT_CHANNEL_I2C_PARAM) {
+		voltdm->rmw(vc->smps_volra_mask,
+			    vc->volt_reg_addr << __ffs(vc->smps_volra_mask),
+			    vc->common->smps_volra_reg);
+		vc->cfg_channel |= cfg_channel_data->rav;
 	}
 
 	/* Set up the on, inactive, retention and off voltage */

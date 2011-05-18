@@ -92,15 +92,16 @@ struct omap_vc_channel_cfg {
 /**
  * struct omap_vc_channel - VC per-instance data
  * @common: pointer to VC common data for this platform
+ * @is_master_channel: if the channel is the master channel
  * @smps_sa_mask: i2c slave address bitmask in the PRM_VC_SMPS_SA register
  * @smps_volra_mask: VOLRA* bitmask in the PRM_VC_VOL_RA register
  * @cfg_ch_bits: exception handling for unordered register bits in cfg_channel
  */
 struct omap_vc_channel {
 	/* channel state */
-	u8 i2c_slave_addr;
-	u8 volt_reg_addr;
-	u8 cmd_reg_addr;
+	u16 i2c_slave_addr;
+	u16 volt_reg_addr;
+	u16 cmd_reg_addr;
 	u8 cfg_channel;
 	struct omap_vc_channel_cfg *cfg_ch_bits;
 	u16 setup_time;
@@ -108,6 +109,7 @@ struct omap_vc_channel {
 
 	/* register access data */
 	const struct omap_vc_common *common;
+	bool is_default_channel;
 	u32 smps_sa_mask;
 	u32 smps_volra_mask;
 	u32 smps_cmdra_mask;
