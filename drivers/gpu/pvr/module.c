@@ -24,6 +24,10 @@
  *
  ******************************************************************************/
 
+#ifndef AUTOCONF_INCLUDED
+ #include <linux/config.h>
+#endif
+
 #if defined(SUPPORT_DRI_DRM)
 #define	PVR_MOD_STATIC
 #else

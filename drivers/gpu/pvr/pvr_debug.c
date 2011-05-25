@@ -24,6 +24,10 @@
  *
  ******************************************************************************/
 
+#ifndef AUTOCONF_INCLUDED
+ #include <linux/config.h>
+#endif
+
 #include <asm/io.h>
 #include <asm/uaccess.h>
 #include <linux/kernel.h>
