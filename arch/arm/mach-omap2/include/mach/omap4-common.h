@@ -13,6 +13,9 @@
 #ifndef OMAP_ARCH_OMAP4_COMMON_H
 #define OMAP_ARCH_OMAP4_COMMON_H
 
+#include <asm/proc-fns.h>
+
+#ifndef __ASSEMBLER__
 /*
  * wfi used in low power code. Directly opcode is used instead
  * of instruction to avoid mulit-omap build break
@@ -43,4 +46,47 @@ extern void __iomem *omap4_get_sar_ram_base(void);
 extern void __init gic_init_irq(void);
 extern void omap_smc1(u32 fn, u32 arg);
 
+/*
+ * Read MPIDR: Multiprocessor affinity register
+ */
+static inline unsigned int hard_smp_processor_id(void)
+{
+	unsigned int cpunum;
+
+	asm volatile (
+	"mrc	 p15, 0, %0, c0, c0, 5\n"
+		: "=r" (cpunum));
+	return cpunum &= 0x0f;
+}
+
+#if defined(CONFIG_SMP)	&& defined(CONFIG_PM)
+extern int omap4_mpuss_init(void);
+extern int omap4_enter_lowpower(unsigned int cpu, unsigned int power_state);
+extern void omap4_cpu_suspend(unsigned int cpu, unsigned int save_state);
+extern void omap4_cpu_resume(void);
+
+#else
+
+static inline int omap4_enter_lowpower(unsigned int cpu,
+					unsigned int power_state)
+{
+	cpu_do_idle();
+	return 0;
+}
+
+static inline int omap4_mpuss_init(void)
+{
+	return 0;
+}
+
+static inline void omap4_cpu_suspend(unsigned int cpu, unsigned int save_state)
+{
+}
+
+static inline void omap4_cpu_resume(void)
+{
+}
+
 #endif
+#endif /* __ASSEMBLER__ */
+#endif /* OMAP_ARCH_OMAP4_COMMON_H */
