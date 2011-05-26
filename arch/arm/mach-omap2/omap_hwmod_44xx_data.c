@@ -2227,7 +2227,7 @@ static struct omap_hwmod omap44xx_gpu_hwmod = {
 	.slaves_cnt	= ARRAY_SIZE(omap44xx_gpu_slaves),
 	.masters	= omap44xx_gpu_masters,
 	.masters_cnt	= ARRAY_SIZE(omap44xx_gpu_masters),
-	.omap_chip	= OMAP_CHIP_INIT(CHIP_IS_OMAP4430),
+	.omap_chip	= OMAP_CHIP_INIT(CHIP_IS_OMAP44XX),
 };
 
 /*
