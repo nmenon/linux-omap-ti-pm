@@ -54,10 +54,10 @@ ifeq ($(CONFIG_PM_OPP),y)
 obj-y					+= opp.o
 obj-$(CONFIG_ARCH_OMAP3)		+= opp3xxx_data.o
 obj-$(CONFIG_ARCH_OMAP4)		+= opp4xxx_data.o
-endif
-
 # CPUFREQ driver
 obj-$(CONFIG_CPU_FREQ)			+= omap2plus-cpufreq.o
+endif
+
 
 # Power Management
 ifeq ($(CONFIG_PM),y)

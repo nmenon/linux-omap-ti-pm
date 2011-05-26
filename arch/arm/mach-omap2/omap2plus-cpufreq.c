@@ -1,7 +1,7 @@
 /*
  *  OMAP2PLUS cpufreq driver
  *
- *  CPU frequency scaling for OMAP
+ *  CPU frequency scaling for OMAP using OPP information
  *
  *  Copyright (C) 2005 Nokia Corporation
  *  Written by Tony Lindgren <tony@atomide.com>
@@ -203,7 +203,6 @@ static int __cpuinit omap_cpu_init(struct cpufreq_policy *policy)
 
 static int omap_cpu_exit(struct cpufreq_policy *policy)
 {
-	clk_exit_cpufreq_table(&freq_table);
 	clk_put(mpu_clk);
 	return 0;
 }
@@ -226,12 +225,15 @@ static struct cpufreq_driver omap_driver = {
 
 static int __init omap_cpufreq_init(void)
 {
-	if (cpu_is_omap24xx())
+	if (cpu_is_omap24xx()) {
 		mpu_clk_name = "virt_prcm_set";
-	else if (cpu_is_omap34xx())
+		pr_warning("%s: omap2 cpufreq needs fixing\n", __func__);
+		return -EINVAL;
+	} else if (cpu_is_omap34xx()) {
 		mpu_clk_name = "dpll1_ck";
-	else if (cpu_is_omap44xx())
+	} else if (cpu_is_omap44xx()) {
 		mpu_clk_name = "dpll_mpu_ck";
+	}
 
 	if (!mpu_clk_name) {
 		pr_err("%s: unsupported Silicon?\n", __func__);
