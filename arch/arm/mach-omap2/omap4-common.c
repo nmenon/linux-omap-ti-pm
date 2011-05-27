@@ -95,6 +95,13 @@ static int __init omap_l2_cache_init(void)
 	if (omap_rev() != OMAP4430_REV_ES1_0)
 		omap_smc1(0x109, aux_ctrl);
 
+	if (cpu_is_omap446x()) {
+		writel_relaxed(0xa5a5, l2cache_base + 0x900);
+		writel_relaxed(0xa5a5, l2cache_base + 0x908);
+		writel_relaxed(0xa5a5, l2cache_base + 0x904);
+		writel_relaxed(0xa5a5, l2cache_base + 0x90C);
+	}
+
 	/* Enable PL310 L2 Cache controller */
 	omap_smc1(0x102, 0x1);
 
