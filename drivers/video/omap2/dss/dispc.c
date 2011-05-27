@@ -184,6 +184,8 @@ static struct {
 
 	u32	fifo_size[3];
 
+	u32	channel_irq[3]; /* Max channels hardcoded to 3*/
+
 	spinlock_t irq_lock;
 	u32 irq_error_mask;
 	struct omap_dispc_isr_data registered_isr[DISPC_MAX_NR_ISRS];
@@ -1823,6 +1825,17 @@ static void _enable_lcd_out(enum omap_channel channel, bool enable)
 		REG_FLD_MOD(DISPC_CONTROL, enable ? 1 : 0, 0, 0);
 }
 
+void omap_dispc_set_irq_type(int channel, enum omap_dispc_irq_type type)
+{
+	if (type == OMAP_DISPC_IRQ_TYPE_VSYNC) {
+		dispc.channel_irq[channel] = channel == OMAP_DSS_CHANNEL_LCD2 ?
+			DISPC_IRQ_VSYNC2 : DISPC_IRQ_VSYNC;
+	} else {
+		dispc.channel_irq[channel] = channel == OMAP_DSS_CHANNEL_LCD2 ?
+			DISPC_IRQ_FRAMEDONE2 : DISPC_IRQ_FRAMEDONE;
+	}
+}
+
 static void dispc_enable_lcd_out(enum omap_channel channel, bool enable)
 {
 	struct completion frame_done_completion;
@@ -1839,8 +1852,7 @@ static void dispc_enable_lcd_out(enum omap_channel channel, bool enable)
 			REG_GET(DISPC_CONTROL2, 0, 0) :
 			REG_GET(DISPC_CONTROL, 0, 0);
 
-	irq = channel == OMAP_DSS_CHANNEL_LCD2 ? DISPC_IRQ_FRAMEDONE2 :
-			DISPC_IRQ_FRAMEDONE;
+	irq = dispc.channel_irq[channel];
 
 	if (!enable && is_on) {
 		init_completion(&frame_done_completion);
@@ -2356,10 +2368,10 @@ unsigned long dispc_fclk_rate(void)
 	unsigned long r = 0;
 
 	switch (dss_get_dispc_clk_source()) {
-	case DSS_CLK_SRC_FCK:
+	case OMAP_DSS_CLK_SRC_FCK:
 		r = dss_clk_get_rate(DSS_CLK_FCK);
 		break;
-	case DSS_CLK_SRC_DSI_PLL_HSDIV_DISPC:
+	case OMAP_DSS_CLK_SRC_DSI_PLL_HSDIV_DISPC:
 		r = dsi_get_pll_hsdiv_dispc_rate();
 		break;
 	default:
@@ -2380,10 +2392,10 @@ unsigned long dispc_lclk_rate(enum omap_channel channel)
 	lcd = FLD_GET(l, 23, 16);
 
 	switch (dss_get_lcd_clk_source(channel)) {
-	case DSS_CLK_SRC_FCK:
+	case OMAP_DSS_CLK_SRC_FCK:
 		r = dss_clk_get_rate(DSS_CLK_FCK);
 		break;
-	case DSS_CLK_SRC_DSI_PLL_HSDIV_DISPC:
+	case OMAP_DSS_CLK_SRC_DSI_PLL_HSDIV_DISPC:
 		r = dsi_get_pll_hsdiv_dispc_rate();
 		break;
 	default:
@@ -2412,8 +2424,8 @@ void dispc_dump_clocks(struct seq_file *s)
 {
 	int lcd, pcd;
 	u32 l;
-	enum dss_clk_source dispc_clk_src = dss_get_dispc_clk_source();
-	enum dss_clk_source lcd_clk_src;
+	enum omap_dss_clk_source dispc_clk_src = dss_get_dispc_clk_source();
+	enum omap_dss_clk_source lcd_clk_src;
 
 	enable_clocks(1);
 
