@@ -305,6 +305,9 @@ static int __init omap4_pm_init(void)
 		       OMAP44XX_IRQ_PRCM);
 		goto err2;
 	}
+
+	local_irq_disable();
+
 	ret = pwrdm_for_each(pwrdms_setup, NULL);
 	if (ret) {
 		pr_err("Failed to setup powerdomains\n");
@@ -339,9 +342,6 @@ static int __init omap4_pm_init(void)
 		goto err2;
 	}
 
-	pr_info("OMAP4 PM: Temporary static dependency added between"
-		"MPUSS <-> EMIF and MPUSS <-> L3_MAIN_1.\n");
-
 	ret = omap4_mpuss_init();
 	if (ret) {
 		pr_err("Failed to initialise OMAP4 MPUSS\n");
@@ -358,6 +358,10 @@ static int __init omap4_pm_init(void)
 	per_pwrdm = pwrdm_lookup("l4per_pwrdm");
 
 	omap4_idle_init();
+
+#ifdef CONFIG_PM
+	local_irq_enable();
+#endif
 
 err2:
 	return ret;
