@@ -650,6 +650,12 @@ struct twl4030_codec_audio_data {
 
 struct twl4030_codec_vibra_data {
 	unsigned int	coexist;
+
+	/* timed-output based implementations */
+	int max_timeout;
+	int initial_vibrate;
+	int (*init)(void);
+	void (*exit)(void);
 };
 
 struct twl4030_codec_data {
@@ -660,6 +666,7 @@ struct twl4030_codec_data {
 	/* twl6040 */
 	int audpwron_gpio;	/* audio power-on gpio */
 	int naudint_irq;	/* audio interrupt */
+	unsigned int irq_base;
 };
 
 struct twl4030_platform_data {
