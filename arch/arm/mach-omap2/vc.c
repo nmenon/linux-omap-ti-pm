@@ -204,7 +204,7 @@ static void __init omap4_vc_init_channel(struct voltagedomain *voltdm)
  * channel registers.  All other VC channels will use the
  * same configuration.
  */
-void __init omap_vc_i2c_init(struct voltagedomain *voltdm)
+static void __init omap_vc_i2c_init(struct voltagedomain *voltdm)
 {
 	struct omap_vc_channel *vc = voltdm->vc;
 	static bool initialized;
