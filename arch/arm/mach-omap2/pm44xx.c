@@ -470,9 +470,7 @@ static int __init omap4_pm_init(void)
 
 	omap4_idle_init();
 
-#ifdef CONFIG_PM
 	local_irq_enable();
-#endif
 
 err2:
 	return ret;
