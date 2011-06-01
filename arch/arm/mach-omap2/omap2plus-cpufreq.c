@@ -1,7 +1,7 @@
 /*
  *  OMAP2PLUS cpufreq driver
  *
- *  CPU frequency scaling for OMAP
+ *  CPU frequency scaling for OMAP using OPP information
  *
  *  Copyright (C) 2005 Nokia Corporation
  *  Written by Tony Lindgren <tony@atomide.com>
@@ -38,29 +38,19 @@
 
 #include <mach/hardware.h>
 
-#define VERY_HI_RATE	900000000
+#include "dvfs.h"
 
 static struct cpufreq_frequency_table *freq_table;
+static atomic_t freq_table_users = ATOMIC_INIT(0);
 static struct clk *mpu_clk;
 static char *mpu_clk_name;
 static struct device *mpu_dev;
 
 static int omap_verify_speed(struct cpufreq_policy *policy)
 {
-	if (freq_table)
-		return cpufreq_frequency_table_verify(policy, freq_table);
-
-	if (policy->cpu)
+	if (!freq_table)
 		return -EINVAL;
-
-	cpufreq_verify_within_limits(policy, policy->cpuinfo.min_freq,
-				     policy->cpuinfo.max_freq);
-
-	policy->min = clk_round_rate(mpu_clk, policy->min * 1000) / 1000;
-	policy->max = clk_round_rate(mpu_clk, policy->max * 1000) / 1000;
-	cpufreq_verify_within_limits(policy, policy->cpuinfo.min_freq,
-				     policy->cpuinfo.max_freq);
-	return 0;
+	return cpufreq_frequency_table_verify(policy, freq_table);
 }
 
 static unsigned int omap_getspeed(unsigned int cpu)
@@ -78,22 +68,35 @@ static int omap_target(struct cpufreq_policy *policy,
 		       unsigned int target_freq,
 		       unsigned int relation)
 {
-	int i, ret = 0;
+	unsigned int i;
+	int ret = 0;
 	struct cpufreq_freqs freqs;
 
 	/* Changes not allowed until all CPUs are online */
 	if (is_smp() && (num_online_cpus() < NR_CPUS))
 		return ret;
 
-	/* Ensure desired rate is within allowed range.  Some govenors
-	 * (ondemand) will just pass target_freq=0 to get the minimum. */
-	if (target_freq < policy->min)
-		target_freq = policy->min;
-	if (target_freq > policy->max)
-		target_freq = policy->max;
+	if (!freq_table) {
+		dev_err(mpu_dev, "%s: cpu%d: no freq table!\n", __func__,
+				policy->cpu);
+		return -EINVAL;
+	}
+
+	ret = cpufreq_frequency_table_target(policy, freq_table, target_freq,
+			relation, &i);
+	if (ret) {
+		dev_dbg(mpu_dev, "%s: cpu%d: no freq match for %d(ret=%d)\n",
+			__func__, policy->cpu, target_freq, ret);
+		return ret;
+	}
+	freqs.new = freq_table[i].frequency;
+	if (!freqs.new) {
+		dev_err(mpu_dev, "%s: cpu%d: no match for freq %d\n", __func__,
+			policy->cpu, target_freq);
+		return -EINVAL;
+	}
 
 	freqs.old = omap_getspeed(policy->cpu);
-	freqs.new = clk_round_rate(mpu_clk, target_freq * 1000) / 1000;
 	freqs.cpu = policy->cpu;
 
 	if (freqs.old == freqs.new)
@@ -115,7 +118,7 @@ set_freq:
 	pr_info("cpufreq-omap: transition: %u --> %u\n", freqs.old, freqs.new);
 #endif
 
-	ret = clk_set_rate(mpu_clk, freqs.new * 1000);
+	ret = omap_device_scale(mpu_dev, mpu_dev, freqs.new * 1000);
 
 	/*
 	 * Generic CPUFREQ driver jiffy update is under !SMP. So jiffies
@@ -153,6 +156,12 @@ skip_lpj:
 	return ret;
 }
 
+static inline void freq_table_free(void)
+{
+	if (atomic_dec_and_test(&freq_table_users))
+		opp_free_cpufreq_table(mpu_dev, &freq_table);
+}
+
 static int __cpuinit omap_cpu_init(struct cpufreq_policy *policy)
 {
 	int result = 0;
@@ -162,22 +171,27 @@ static int __cpuinit omap_cpu_init(struct cpufreq_policy *policy)
 	if (IS_ERR(mpu_clk))
 		return PTR_ERR(mpu_clk);
 
-	if (policy->cpu >= NR_CPUS)
-		return -EINVAL;
+	if (policy->cpu >= NR_CPUS) {
+		result = -EINVAL;
+		goto fail_ck;
+	}
 
 	policy->cur = policy->min = policy->max = omap_getspeed(policy->cpu);
-	opp_init_cpufreq_table(mpu_dev, &freq_table);
 
-	if (freq_table) {
-		result = cpufreq_frequency_table_cpuinfo(policy, freq_table);
-		if (!result)
-			cpufreq_frequency_table_get_attr(freq_table,
-							policy->cpu);
-	} else {
-		policy->cpuinfo.min_freq = clk_round_rate(mpu_clk, 0) / 1000;
-		policy->cpuinfo.max_freq = clk_round_rate(mpu_clk,
-							VERY_HI_RATE) / 1000;
+	if (atomic_inc_return(&freq_table_users) == 1)
+		result = opp_init_cpufreq_table(mpu_dev, &freq_table);
+
+	if (result) {
+		dev_err(mpu_dev, "%s: cpu%d: failed creating freq table[%d]\n",
+				__func__, policy->cpu, result);
+		goto fail_ck;
 	}
+
+	result = cpufreq_frequency_table_cpuinfo(policy, freq_table);
+	if (!result)
+		cpufreq_frequency_table_get_attr(freq_table, policy->cpu);
+	else
+		goto fail_table;
 
 	policy->min = policy->cpuinfo.min_freq;
 	policy->max = policy->cpuinfo.max_freq;
@@ -200,11 +214,17 @@ static int __cpuinit omap_cpu_init(struct cpufreq_policy *policy)
 	policy->cpuinfo.transition_latency = 300 * 1000;
 
 	return 0;
+
+fail_table:
+	freq_table_free();
+fail_ck:
+	clk_put(mpu_clk);
+	return result;
 }
 
 static int omap_cpu_exit(struct cpufreq_policy *policy)
 {
-	clk_exit_cpufreq_table(&freq_table);
+	freq_table_free();
 	clk_put(mpu_clk);
 	return 0;
 }
@@ -227,12 +247,17 @@ static struct cpufreq_driver omap_driver = {
 
 static int __init omap_cpufreq_init(void)
 {
-	if (cpu_is_omap24xx())
+	if (cpu_is_omap24xx()) {
 		mpu_clk_name = "virt_prcm_set";
-	else if (cpu_is_omap34xx())
+		pr_warning("%s: omap2 cpufreq needs fixing\n", __func__);
+		return -EINVAL;
+	} else if (cpu_is_omap34xx()) {
 		mpu_clk_name = "dpll1_ck";
-	else if (cpu_is_omap44xx())
+	} else if (cpu_is_omap443x()) {
 		mpu_clk_name = "dpll_mpu_ck";
+	} else if (cpu_is_omap446x()) {
+		mpu_clk_name = "virt_dpll_mpu_ck";
+	}
 
 	if (!mpu_clk_name) {
 		pr_err("%s: unsupported Silicon?\n", __func__);
