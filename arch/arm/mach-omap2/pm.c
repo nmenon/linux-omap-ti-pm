@@ -196,15 +196,26 @@ static int __init omap2_set_init_voltage(char *vdd_name, char *clk_name,
 	}
 
 	freq = clk->rate;
-	clk_put(clk);
 
 	opp = opp_find_freq_ceil(dev, &freq);
 	if (IS_ERR(opp)) {
-		printk(KERN_ERR "%s: unable to find boot up OPP for vdd_%s\n",
-			__func__, vdd_name);
-		goto exit;
+		printk(KERN_ERR "%s: unable to find boot OPP f=%ld for vdd%s\n",
+			__func__, freq, vdd_name);
+		opp = opp_find_freq_floor(dev, &freq);
+		if (IS_ERR(opp)) {
+			pr_err("%s: unable to find a lower to %ld either!\n",
+					__func__, freq);
+			goto exit_ck;
+		}
+
+		if (clk_set_rate(clk, freq) < 0) {
+			pr_err("%s: unable to set the clock to %ld either!\n",
+					__func__, freq);
+			goto exit_ck;
+		}
 	}
 
+	clk_put(clk);
 	bootup_volt = opp_get_voltage(opp);
 	if (!bootup_volt) {
 		printk(KERN_ERR "%s: unable to find voltage corresponding"
@@ -215,6 +226,8 @@ static int __init omap2_set_init_voltage(char *vdd_name, char *clk_name,
 	voltdm_scale(voltdm, bootup_volt);
 	return 0;
 
+exit_ck:
+	clk_put(clk);
 exit:
 	printk(KERN_ERR "%s: Unable to put vdd_%s to its init voltage\n\n",
 		__func__, vdd_name);
