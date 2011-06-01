@@ -43,6 +43,7 @@ static atomic_t freq_table_users = ATOMIC_INIT(0);
 static struct clk *mpu_clk;
 static char *mpu_clk_name;
 static struct device *mpu_dev;
+static bool cpu_boot_ok;
 
 static int omap_verify_speed(struct cpufreq_policy *policy)
 {
@@ -70,8 +71,8 @@ static int omap_target(struct cpufreq_policy *policy,
 	int ret = 0;
 	struct cpufreq_freqs freqs;
 
-	/* Changes not allowed until all CPUs are online */
-	if (is_smp() && (num_online_cpus() < NR_CPUS))
+	/* Changes not allowed until all CPUs are online at boot */
+	if (is_smp() && !cpu_boot_ok && num_online_cpus() < NR_CPUS)
 		return ret;
 
 	if (!freq_table) {
@@ -210,6 +211,13 @@ static int __cpuinit omap_cpu_init(struct cpufreq_policy *policy)
 
 	/* FIXME: what's the actual transition time? */
 	policy->cpuinfo.transition_latency = 300 * 1000;
+
+	/*
+	 * If we have onlined all CPUs OR if we are the last CPU to be onlined
+	 * at boot, release our boot-time transition constraint.
+	 */
+	if (is_smp() && !cpu_boot_ok && num_online_cpus() >= NR_CPUS - 1)
+		cpu_boot_ok = true;
 
 	return 0;
 
