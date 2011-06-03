@@ -98,7 +98,7 @@ static int omap_target(struct cpufreq_policy *policy,
 	freqs.old = omap_getspeed(policy->cpu);
 	freqs.cpu = policy->cpu;
 
-	if (freqs.old == freqs.new)
+	if (freqs.old == freqs.new && policy->cur == freqs.new)
 		return ret;
 
 	if (!is_smp()) {
@@ -284,5 +284,5 @@ static void __exit omap_cpufreq_exit(void)
 
 MODULE_DESCRIPTION("cpufreq driver for OMAP2PLUS SOCs");
 MODULE_LICENSE("GPL");
-module_init(omap_cpufreq_init);
+late_initcall(omap_cpufreq_init);
 module_exit(omap_cpufreq_exit);
