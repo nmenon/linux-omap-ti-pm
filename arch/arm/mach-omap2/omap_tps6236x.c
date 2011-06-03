@@ -66,7 +66,7 @@
 #define REG_TPS6236X_CTRL_PD_VSEL1	BIT(5)
 
 /* TWL usage */
-#define TWL6030_REG_SYSEN_CFG_GRP			0x06
+#define TWL6030_REG_SYSEN_CFG_GRP			0xB3
 #define TWL6030_BIT_APE_GRP				BIT(0)
 
 /* Voltage params of the attached device (all in uV) */
