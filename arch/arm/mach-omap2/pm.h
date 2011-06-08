@@ -155,7 +155,7 @@ static inline int omap_pmic_register_data(struct omap_pmic_map *map)
 	return -EINVAL;
 }
 #endif
-extern void omap_pmic_init(void);
+extern void omap_pmic_data_init(void);
 
 #ifdef CONFIG_TWL4030_CORE
 extern int omap_twl_init(void);

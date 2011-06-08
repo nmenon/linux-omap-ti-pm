@@ -17,9 +17,9 @@
 #include "pm.h"
 
 /**
- * omap_pmic_init() - trigger point for all PMIC initializers
+ * omap_pmic_data_init() - trigger point for all PMIC initializers
  */
-void __init omap_pmic_init(void)
+void __init omap_pmic_data_init(void)
 {
 	omap_twl_init();
 	omap_tps6236x_init();
