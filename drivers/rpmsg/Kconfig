@@ -4,6 +4,7 @@ config RPMSG
 	select VIRTIO
 	select VIRTIO_RING
 	depends on OMAP_RPMSG
+	depends on TI_TILER
 	---help---
 	  This virtio driver provides support for shared-memory-based
           remote processor messaging, by registering the RPMSG bus which
