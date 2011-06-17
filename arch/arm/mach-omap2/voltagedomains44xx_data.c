@@ -100,7 +100,7 @@ static int __init omap44xx_voltage_early_init(void)
 		omap4_vdd_iva_info.volt_data = omap446x_vdd_iva_volt_data;
 		omap4_vdd_core_info.volt_data = omap446x_vdd_core_volt_data;
 	} else {
-		return -ENODATA;
+		return;
 	}
 
 	return omap_voltage_early_init(prm_mod, prm_irqst_ocp_mod,
