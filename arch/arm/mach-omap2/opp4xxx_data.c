@@ -159,13 +159,44 @@ static struct omap_opp_def __initdata omap443x_opp_def_list[] = {
 	OPP_INITIALIZER("l3_main_1", "virt_l3_ck", "core", true, 100000000, OMAP44XX_VDD_CORE_OPP50_UV),
 	/* L3 OPP2 - OPP100, OPP-Turbo, OPP-SB */
 	OPP_INITIALIZER("l3_main_1", "virt_l3_ck", "core", true, 200000000, OMAP44XX_VDD_CORE_OPP100_UV),
+	/* EMIF1 OPP1 - OPP50 */
+	OPP_INITIALIZER("emif1", "dpll_core_m2_ck", "core", true, 400000000, OMAP44XX_VDD_CORE_OPP50_UV),
+	/* EMIF1 OPP2 - OPP100 */
+	OPP_INITIALIZER("emif1", "dpll_core_m2_ck", "core", true, 800000000, OMAP44XX_VDD_CORE_OPP100_UV),
+	/* EMIF2 OPP1 - OPP50 */
+	OPP_INITIALIZER("emif2", "dpll_core_m2_ck", "core", true, 400000000, OMAP44XX_VDD_CORE_OPP50_UV),
+	/* EMIF2 OPP2 - OPP100 */
+	OPP_INITIALIZER("emif2", "dpll_core_m2_ck", "core", true, 800000000, OMAP44XX_VDD_CORE_OPP100_UV),
+	/* CAM FDIF OPP1 - OPP50 */
+	OPP_INITIALIZER("fdif", "fdif_fck", "core", true, 64000000, OMAP44XX_VDD_CORE_OPP50_UV),
+	/* CAM FDIF OPP2 - OPP100 */
+	OPP_INITIALIZER("fdif", "fdif_fck", "core", true, 128000000, OMAP44XX_VDD_CORE_OPP100_UV),
+	/* SGX OPP1 - OPP50 */
+	OPP_INITIALIZER("gpu", "dpll_per_m7x2_ck", "core", true, 153600000, OMAP44XX_VDD_CORE_OPP50_UV),
+	/* SGX OPP2 - OPP100 */
+	OPP_INITIALIZER("gpu", "dpll_per_m7x2_ck", "core", true, 307200000, OMAP44XX_VDD_CORE_OPP50_UV),
+	/* HSI OPP1 - OPP50 */
+	OPP_INITIALIZER("hsi", "hsi_fck", "core", true, 96000000, OMAP44XX_VDD_CORE_OPP50_UV),
+	/* HSI OPP2 - OPP100 */
+	OPP_INITIALIZER("hsi", "hsi_fck", "core", true, 96000000, OMAP44XX_VDD_CORE_OPP100_UV),
 	/* IVA OPP1 - OPP50 */
 	OPP_INITIALIZER("iva", "dpll_iva_m5x2_ck", "iva", true, 133000000, OMAP4430_VDD_IVA_OPP50_UV),
 	/* IVA OPP2 - OPP100 */
 	OPP_INITIALIZER("iva", "dpll_iva_m5x2_ck", "iva", true, 266100000, OMAP4430_VDD_IVA_OPP100_UV),
 	/* IVA OPP3 - OPP-Turbo */
 	OPP_INITIALIZER("iva", "dpll_iva_m5x2_ck", "iva", false, 332000000, OMAP4430_VDD_IVA_OPPTURBO_UV),
-	/* TODO: add DSP, aess, fdif, gpu */
+	/* DSP OPP1 - OPP50 */
+	OPP_INITIALIZER("dsp", "dpll_iva_m4x2_ck", "iva", true, 232800000, OMAP4430_VDD_IVA_OPP50_UV),
+	/* DSP OPP2 - OPP100 */
+	OPP_INITIALIZER("dsp", "dpll_iva_m4x2_ck", "iva", true, 465600000, OMAP4430_VDD_IVA_OPP100_UV),
+	/* DSP OPP2 - OPPTB */
+	OPP_INITIALIZER("dsp", "dpll_iva_m4x2_ck", "iva", false, 498000000, OMAP4430_VDD_IVA_OPPTURBO_UV),
+	/* ABE OPP1 - OPP50 */
+	OPP_INITIALIZER("omap-aess-audio", "abe_clk", "iva", true, 98304000, OMAP4430_VDD_IVA_OPP50_UV),
+	/* ABE OPP2 - OPP100 */
+	OPP_INITIALIZER("omap-aess-audio", "abe_clk", "iva", true, 196608000, OMAP4430_VDD_IVA_OPP100_UV),
+	/* ABE OPP3 - OPPTB */
+	OPP_INITIALIZER("omap-aess-audio", "abe_clk", "iva", false, 196608000, OMAP4430_VDD_IVA_OPPTURBO_UV),
 };
 
 
@@ -189,6 +220,29 @@ static struct omap_opp_def __initdata omap446x_opp_def_list[] = {
 	OPP_INITIALIZER("l3_main_1", "virt_l3_ck", "core", true, 100000000, OMAP44XX_VDD_CORE_OPP50_UV),
 	/* L3 OPP2 - OPP100 */
 	OPP_INITIALIZER("l3_main_1", "virt_l3_ck", "core", true, 200000000, OMAP44XX_VDD_CORE_OPP100_UV),
+	/* EMIF1 OPP1 - OPP50 */
+	OPP_INITIALIZER("emif1", "dpll_core_m2_ck", "core", true, 400000000, OMAP44XX_VDD_CORE_OPP50_UV),
+	/* EMIF1 OPP2 - OPP100 */
+	OPP_INITIALIZER("emif1", "dpll_core_m2_ck", "core", true, 800000000, OMAP44XX_VDD_CORE_OPP100_UV),
+	/* EMIF2 OPP1 - OPP50 */
+	OPP_INITIALIZER("emif2", "dpll_core_m2_ck", "core", true, 400000000, OMAP44XX_VDD_CORE_OPP50_UV),
+	/* EMIF2 OPP2 - OPP100 */
+	OPP_INITIALIZER("emif2", "dpll_core_m2_ck", "core", true, 800000000, OMAP44XX_VDD_CORE_OPP100_UV),
+	/* CAM FDIF OPP1 - OPP50 */
+	OPP_INITIALIZER("fdif", "fdif_fck", "core", true, 64000000, OMAP44XX_VDD_CORE_OPP50_UV),
+	/* CAM FDIF OPP2 - OPP100 */
+	OPP_INITIALIZER("fdif", "fdif_fck", "core", true, 128000000, OMAP44XX_VDD_CORE_OPP100_UV),
+	/* TODO: These OPP's are disabled until we have a SGX driver in place */
+	/* SGX OPP1 - OPP50 */
+	OPP_INITIALIZER("gpu", "dpll_per_m7x2_ck", "core", true, 153600000, OMAP44XX_VDD_CORE_OPP50_UV),
+	/* SGX OPP2 - OPP100 */
+	OPP_INITIALIZER("gpu", "dpll_per_m7x2_ck", "core", true, 307200000, OMAP44XX_VDD_CORE_OPP100_UV),
+	/* SGX OPP3 - OPPOV */
+	OPP_INITIALIZER("gpu", "dpll_per_m7x2_ck", "core", true, 384000000, OMAP4460_VDD_CORE_OPP100_OV_UV),
+	/* HSI OPP1 - OPP50 */
+	OPP_INITIALIZER("hsi", "hsi_fck", "core", true, 96000000, OMAP44XX_VDD_CORE_OPP50_UV),
+	/* HSI OPP2 - OPP100 */
+	OPP_INITIALIZER("hsi", "hsi_fck", "core", true, 96000000, OMAP44XX_VDD_CORE_OPP100_UV),
 	/* IVA OPP1 - OPP50 */
 	OPP_INITIALIZER("iva", "dpll_iva_m5x2_ck", "iva", true, 133000000, OMAP4460_VDD_IVA_OPP50_UV),
 	/* IVA OPP2 - OPP100 */
@@ -204,8 +258,18 @@ static struct omap_opp_def __initdata omap446x_opp_def_list[] = {
 	OPP_INITIALIZER("iva", "dpll_iva_m5x2_ck", "iva", false, 430000000, OMAP4460_VDD_IVA_OPPNITRO_UV),
 	/* IVA OPP5 - OPP-Nitro SpeedBin*/
 	OPP_INITIALIZER("iva", "dpll_iva_m5x2_ck", "iva", false, 500000000, OMAP4460_VDD_IVA_OPPNITRO_UV),
-
-	/* TODO: add DSP, aess, fdif, gpu */
+	/* DSP OPP1 - OPP50 */
+	OPP_INITIALIZER("dsp", "dpll_iva_m4x2_ck", "iva", true, 232800000, OMAP4460_VDD_IVA_OPP50_UV),
+	/* DSP OPP2 - OPP100 */
+	OPP_INITIALIZER("dsp", "dpll_iva_m4x2_ck", "iva", true, 465600000, OMAP4460_VDD_IVA_OPP100_UV),
+	/* DSP OPP2 - OPPTB */
+	OPP_INITIALIZER("dsp", "dpll_iva_m4x2_ck", "iva", false, 498000000, OMAP4460_VDD_IVA_OPPTURBO_UV),
+	/* ABE OPP1 - OPP50 */
+	OPP_INITIALIZER("omap-aess-audio", "abe_clk", "iva", true, 98304000, OMAP4460_VDD_IVA_OPP50_UV),
+	/* ABE OPP2 - OPP100 */
+	OPP_INITIALIZER("omap-aess-audio", "abe_clk", "iva", true, 196608000, OMAP4460_VDD_IVA_OPP100_UV),
+	/* ABE OPP3 - OPPTB */
+	OPP_INITIALIZER("omap-aess-audio", "abe_clk", "iva", false, 196608000, OMAP4460_VDD_IVA_OPPTURBO_UV),
 };
 
 /**
