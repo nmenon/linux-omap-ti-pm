@@ -1592,9 +1592,18 @@ done:
 static int omap_serial_runtime_resume(struct device *dev)
 {
 	struct uart_omap_port *up = dev_get_drvdata(dev);
+	struct omap_device *od;
 
-	if (up)
+	if (up) {
 		omap_uart_restore_context(up);
+
+		if (up->use_dma) {
+			/* NO TX_DMA WAKEUP SO KEEP IN NO IDLE MODE */
+			od = to_omap_device(up->pdev);
+			omap_hwmod_set_slave_idlemode(od->hwmods[0],
+						HWMOD_IDLEMODE_NO);
+		}
+	}
 
 	return 0;
 }
