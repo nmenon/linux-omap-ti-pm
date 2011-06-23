@@ -390,9 +390,9 @@ skip_l2en:
 	msr	cpsr, r7			@ store cpsr
 
 	/*
-	 * Enabling MMU here. Page entry needs to be altered
-	 * to create temporary 1:1 map and then resore the entry
-	 * ones MMU is enabled
+	 * Enabling MMU here. Switch to a page table with an identity mapping
+	 * for kernel
+	 * Saves original TTBR0 in r1
 	 */
 	mrc	p15, 0, r7, c2, c0, 2		@ Read TTBRControl
 	and	r7, #0x7			@ Extract N (0:2) to decide
@@ -401,46 +401,16 @@ skip_l2en:
 ttbr_error:
 	b	ttbr_error			@ Only N = 0 supported
 use_ttbr0:
-	mrc	p15, 0, r2, c2, c0, 0		@ Read TTBR0
-	ldr	r5, =TTRBIT_MASK
-	and	r2, r5
-	mov	r4, pc
-	ldr	r5, =TABLE_INDEX_MASK
-	and	r4, r5				@ r4 = 31 to 20 bits of pc
-	ldr	r1, =TABLE_ENTRY
-	add	r1, r1, r4			@ r1 has value of table entry
-	lsr	r4, #18				@ Address of table entry
-	add	r2, r4				@ r2 - location to be modified
+	mrc	p15, 0, r1, c2, c0, 0		@ Read TTBR0
+	ldr	r5, =~TTRBIT_MASK
+	and	r4, r1, r5
+	ldr	r5, =omap4_pgd_phys
+	add	r5, r5, #(PLAT_PHYS_OFFSET - PAGE_OFFSET)
+	ldr	r5, [r5]
+	orr	r5, r5, r4
+	mcr	p15, 0, r5, c2, c0, 0	@ TTB 0
+	isb
 
-	/* Ensure the modified entry makes it to main memory */
-#ifdef CONFIG_CACHE_L2X0
-	ldr	r5, =OMAP44XX_L2CACHE_BASE
-	str	r2, [r5, #L2X0_CLEAN_INV_LINE_PA]
-wait_l2:
-	ldr	r0, [r5, #L2X0_CLEAN_INV_LINE_PA]
-	ands	r0, #1
-	bne	wait_l2
-#endif
-
-	/* Storing previous entry of location being modified */
-	ldr     r5, =OMAP44XX_SAR_RAM_BASE
-	ldr	r4, [r2]
-	mrc	p15, 0, r0, c0, c0, 5		@ Read MPIDR
-	ands	r0, r0, #0x0f
-	streq	r4, [r5, #MMU_OFFSET0]		@ Modify the table entry
-	strne	r4, [r5, #MMU_OFFSET1]
-	str	r1, [r2]
-
-	/*
-	 * Storing address of entry being modified
-	 * It will be restored after enabling MMU
-	 */
-	ldr     r5, =OMAP44XX_SAR_RAM_BASE
-	mrc	p15, 0, r0, c0, c0, 5		@ Read MPIDR
-	ands	r0, r0, #0x0f
-	orreq	r5, r5, #MMU_OFFSET0
-	orrne	r5, r5, #MMU_OFFSET1
-	str	r2, [r5, #TABLE_ADDRESS_OFFSET]
 	mov	r0, #0
 	mcr	p15, 0, r0, c7, c5, 4		@ Flush prefetch buffer
 	mcr	p15, 0, r0, c7, c5, 6		@ Invalidate BTB
@@ -450,35 +420,21 @@ wait_l2:
 	/*
 	 * Restore control register  but don't enable Data caches here.
 	 * Caches will be enabled after restoring MMU table entry.
+	 * Saves original control register with caches enabled in r4
 	 */
 	ldmia	r3!, {r4}
-	str	r4, [r5, #CR_VALUE_OFFSET]	@ Store previous value of CR
 	ldr	r2, =CACHE_DISABLE_MASK
-	and	r4, r2
-	mcr	p15, 0, r4, c1, c0, 0
+	and	r2, r4, r2
+	mcr	p15, 0, r2, c1, c0, 0
 	isb
 	dsb
 	ldr	r0, =mmu_on_label
 	bx	r0
 mmu_on_label:
-	/* Set up the per-CPU stacks */
-	bl	cpu_init
+	/* Restore original TTBR0 */
+	mcr	p15, 0, r1, c2, c0, 0	@ TTB 0
+	isb
 
-	/*
-	 * Restore the MMU table entry that was modified for
-	 * enabling MMU.
-	 */
-	bl	omap4_get_sar_ram_base
-	mov	r8, r0
-	mrc	p15, 0, r0, c0, c0, 5		@ Read MPIDR
-	ands	r0, r0, #0x0f
-	orreq	r8, r8, #MMU_OFFSET0		@ Get address of entry that..
-	orrne	r8, r8, #MMU_OFFSET1		@ was modified
-	ldr	r2, [r8, #TABLE_ADDRESS_OFFSET]
-	ldr	r3, =local_va2pa_offet
-	add	r2, r2, r3
-	ldr	r0, [r8]			@ Get the previous value..
-	str	r0, [r2]			@ which needs to be restored
 	mov	r0, #0
 	mcr	p15, 0, r0, c7, c1, 6		@ flush TLB and issue barriers
 	mcr	p15, 0, r0, c7, c5, 4		@ Flush prefetch buffer
@@ -487,14 +443,15 @@ mmu_on_label:
 	mcr	p15, 0, r0, c8, c6, 0		@ Invalidate DTLB
 	dsb
 	isb
-	ldr	r0, [r8, #CR_VALUE_OFFSET]	@ Restore the Control register
-	mcr     p15, 0, r0, c1, c0, 0		@ with caches enabled.
+
+	/* Restore the Control register with caches enabled */
+	mcr	p15, 0, r4, c1, c0, 0
 	isb
 
+	/* Set up the per-CPU stacks */
+	bl	cpu_init
+
 	ldmfd	sp!, {r0-r12, pc}		@ restore regs and return
-
-	.equ	local_va2pa_offet, (PLAT_PHYS_OFFSET + PAGE_OFFSET)
-
 ENDPROC(omap4_cpu_resume)
 
 ENTRY(omap_bus_sync)
