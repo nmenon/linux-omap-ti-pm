@@ -40,6 +40,7 @@
 
 #include "vc.h"
 #include "vp.h"
+#include "abb.h"
 
 static LIST_HEAD(voltdm_list);
 
@@ -373,6 +374,9 @@ int __init omap_voltage_late_init(void)
 
 		if (voltdm->vc)
 			omap_vc_init_channel(voltdm);
+
+		if (voltdm->abb)
+			omap_abb_init(voltdm);
 
 		if (voltage_dir)
 			voltdm_debugfs_init(voltage_dir, voltdm);

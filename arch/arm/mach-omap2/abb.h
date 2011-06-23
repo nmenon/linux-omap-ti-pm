@@ -56,4 +56,9 @@ extern struct omap_abb_instance omap36xx_abb_mpu;
 extern struct omap_abb_instance omap4_abb_mpu;
 extern struct omap_abb_instance omap4_abb_iva;
 
+void omap_abb_init(struct voltagedomain *voltdm);
+void omap_abb_enable(struct voltagedomain *voltdm);
+void omap_abb_disble(struct voltagedomain *voltdm);
+int omap_abb_set_opp(struct voltagedomain *voltdm, u8 abb_type);
+
 #endif

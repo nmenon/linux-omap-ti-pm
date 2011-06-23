@@ -5,6 +5,7 @@
 
 #include "voltage.h"
 #include "vp.h"
+#include "abb.h"
 #include "prm-regbits-34xx.h"
 #include "prm-regbits-44xx.h"
 #include "prm44xx.h"
@@ -122,9 +123,26 @@ int omap_vp_forceupdate_scale(struct voltagedomain *voltdm,
 			      unsigned long target_volt)
 {
 	struct omap_vp_instance *vp = voltdm->vp;
+	struct omap_volt_data *curr_volt_data, *target_volt_data;
 	u32 vpconfig;
 	u8 target_vsel, current_vsel;
+	u8 curr_abb_type = 0, target_abb_type = 0;
 	int ret, timeout = 0;
+
+	/* get per-voltage ABB data */
+	curr_volt_data = omap_voltage_get_voltdata(voltdm, voltdm->curr_volt);
+	target_volt_data = omap_voltage_get_voltdata(voltdm, target_volt);
+
+	/* voltdm->curr_volt is always zero at boot-time */
+	if (!IS_ERR_OR_NULL(curr_volt_data)
+			&& !IS_ERR_OR_NULL(target_volt_data)) {
+		curr_abb_type = curr_volt_data->abb_type;
+		target_abb_type = target_volt_data->abb_type;
+	}
+
+	/* bypass ABB ldo */
+	if (target_abb_type < curr_abb_type)
+		omap_abb_set_opp(voltdm, target_abb_type);
 
 	ret = omap_vc_pre_scale(voltdm, target_volt, &target_vsel, &current_vsel);
 	if (ret)
@@ -201,6 +219,10 @@ int omap_vp_forceupdate_scale(struct voltagedomain *voltdm,
 	/* Clear force bit */
 	vpconfig &= ~vp->common->vpconfig_forceupdate;
 	voltdm->write(vpconfig, vp->vpconfig);
+
+	/* enable Forward Body-Bias on ABB ldo */
+	if (target_abb_type > curr_abb_type)
+		omap_abb_set_opp(voltdm, target_abb_type);
 
 	return 0;
 }
