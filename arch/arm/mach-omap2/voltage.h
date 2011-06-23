@@ -102,12 +102,15 @@ struct voltagedomain {
  *			with voltage.
  * @vp_errorgain:	Error gain value for the voltage processor. This
  *			field also differs according to the voltage/opp.
+ * @abb_type:		Either NOMINAL_OPP, which bypasses ABB ldo, or
+ *			FAST_OPP, which enables Forward-Body Bias.
  */
 struct omap_volt_data {
 	u32	volt_nominal;
 	u32	sr_efuse_offs;
 	u8	sr_errminlimit;
 	u8	vp_errgain;
+	u8	abb_type;
 };
 
 /*
