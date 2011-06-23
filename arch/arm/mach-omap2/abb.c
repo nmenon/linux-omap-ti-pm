@@ -15,6 +15,13 @@
 #include "abb.h"
 #include "voltage.h"
 
+/**
+ * omap_abb_set_opp() - setup abb on an OPP
+ * @voltdm:	voltage domain
+ * @abb_type:	type of ABB used
+ *
+ * setup ABB for a domain
+ */
 int omap_abb_set_opp(struct voltagedomain *voltdm, u8 abb_type)
 {
 	struct omap_abb_instance *abb = voltdm->abb;
@@ -24,10 +31,11 @@ int omap_abb_set_opp(struct voltagedomain *voltdm, u8 abb_type)
 	timeout = 0;
 	while (timeout++ < ABB_TRANXDONE_TIMEOUT) {
 		abb->common->ops->clear_tranxdone(abb->done_st_mask,
-				abb->irqstatus_mpu_offs);
+						  abb->irqstatus_mpu_offs);
 
 		ret = abb->common->ops->check_tranxdone(abb->done_st_mask,
-				abb->irqstatus_mpu_offs);
+							abb->
+							irqstatus_mpu_offs);
 		if (!ret)
 			break;
 
@@ -36,28 +44,27 @@ int omap_abb_set_opp(struct voltagedomain *voltdm, u8 abb_type)
 
 	if (timeout >= ABB_TRANXDONE_TIMEOUT) {
 		pr_warning("%s: vdd_%s ABB TRANXDONE timeout\n",
-				__func__, voltdm->name);
+			   __func__, voltdm->name);
 		return -ETIMEDOUT;
 	}
 
 	/* program next state of ABB ldo */
 	voltdm->rmw(abb->common->opp_sel_mask,
-			abb_type << abb->common->opp_sel_shift,
-			abb->ctrl_offs);
+		    abb_type << abb->common->opp_sel_shift, abb->ctrl_offs);
 
 	/* initiate ABB ldo change */
 	voltdm->rmw(abb->common->opp_change_mask,
-			abb->common->opp_change_mask,
-			abb->ctrl_offs);
+		    abb->common->opp_change_mask, abb->ctrl_offs);
 
 	/* clear interrupt status */
 	timeout = 0;
 	while (timeout++ < ABB_TRANXDONE_TIMEOUT) {
 		abb->common->ops->clear_tranxdone(abb->done_st_mask,
-				abb->irqstatus_mpu_offs);
+						  abb->irqstatus_mpu_offs);
 
 		ret = abb->common->ops->check_tranxdone(abb->done_st_mask,
-				abb->irqstatus_mpu_offs);
+							abb->
+							irqstatus_mpu_offs);
 		if (!ret)
 			break;
 
@@ -66,13 +73,19 @@ int omap_abb_set_opp(struct voltagedomain *voltdm, u8 abb_type)
 
 	if (timeout >= ABB_TRANXDONE_TIMEOUT) {
 		pr_warning("%s: vdd_%s ABB TRANXDONE timeout\n",
-				__func__, voltdm->name);
+			   __func__, voltdm->name);
 		return -ETIMEDOUT;
 	}
 
 	return 0;
 }
 
+/**
+ * omap_abb_enable() - Enable ABB
+ * @voltdm:	voltage domain
+ *
+ * Enable ABB
+ */
 void omap_abb_enable(struct voltagedomain *voltdm)
 {
 	struct omap_abb_instance *abb = voltdm->abb;
@@ -83,10 +96,15 @@ void omap_abb_enable(struct voltagedomain *voltdm)
 	abb->enabled = true;
 
 	voltdm->rmw(abb->common->sr2en_mask, abb->common->sr2en_mask,
-			abb->setup_offs);
+		    abb->setup_offs);
 }
 
-/* not used, but will be needed if made into a loadable module */
+/**
+ * omap_abb_disable() - Disable ABB
+ * @voltdm:	voltage domain
+ *
+ * Currently unused, but may be needed for future module conversion
+ */
 void omap_abb_disable(struct voltagedomain *voltdm)
 {
 	struct omap_abb_instance *abb = voltdm->abb;
@@ -97,10 +115,15 @@ void omap_abb_disable(struct voltagedomain *voltdm)
 	abb->enabled = false;
 
 	voltdm->rmw(abb->common->sr2en_mask, (0 << abb->common->sr2en_shift),
-			abb->setup_offs);
+		    abb->setup_offs);
 }
 
-/* initialize an ABB instance for Forward Body-Bias */
+/**
+ * omap_abb_init() - initialize an ABB instance
+ * @voltdm:	voltage domain
+ *
+ * Initialize an ABB instance for Forward Body-Bias
+ */
 void __init omap_abb_init(struct voltagedomain *voltdm)
 {
 	struct omap_abb_instance *abb = voltdm->abb;
@@ -137,13 +160,12 @@ void __init omap_abb_init(struct voltagedomain *voltdm)
 	sr2_wt_cnt_val = DIV_ROUND_CLOSEST(settling_time, cycle_rate);
 
 	voltdm->rmw(abb->common->sr2_wtcnt_value_mask,
-			(sr2_wt_cnt_val << abb->common->sr2_wtcnt_value_shift),
-			abb->setup_offs);
+		    (sr2_wt_cnt_val << abb->common->sr2_wtcnt_value_shift),
+		    abb->setup_offs);
 
 	/* allow Forward Body-Bias */
 	voltdm->rmw(abb->common->active_fbb_sel_mask,
-			abb->common->active_fbb_sel_mask,
-			abb->setup_offs);
+		    abb->common->active_fbb_sel_mask, abb->setup_offs);
 
 	/* enable the ldo */
 	omap_abb_enable(voltdm);
