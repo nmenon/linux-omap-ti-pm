@@ -50,6 +50,7 @@
 #include <asm/smp_scu.h>
 #include <asm/system.h>
 #include <asm/irq.h>
+#include <asm/pgalloc.h>
 #include <asm/hardware/gic.h>
 #include <asm/hardware/cache-l2x0.h>
 
@@ -77,6 +78,10 @@
 
 /* GIC save SAR bank base */
 static struct powerdomain *mpuss_pd;
+
+unsigned long omap4_pgd_phys;
+static pgd_t *omap4_pgd;
+
 /*
  * Maximum Secure memory storage size.
  */
@@ -503,6 +508,28 @@ static void save_l2x0_auxctrl(void)
 }
 
 /*
+ * create_suspend_pgtable
+ *
+ * Creates a page table with identity mappings of physical memory and IRAM
+ * for use when the MMU is off, in addition to all the regular kernel mappings.
+ */
+static int create_suspend_pgtable(void)
+{
+	omap4_pgd = pgd_alloc(&init_mm);
+	WARN_ON(!omap4_pgd);
+
+	identity_mapping_add(omap4_pgd,
+			     PLAT_PHYS_OFFSET,
+			     PLAT_PHYS_OFFSET + SZ_1G);
+
+	omap4_pgd_phys = virt_to_phys(omap4_pgd);
+	flush_cache_all();
+	outer_flush_all();
+
+	return 0;
+}
+
+/*
  * Initialise OMAP4 MPUSS
  */
 int __init omap4_mpuss_init(void)
@@ -514,6 +541,8 @@ int __init omap4_mpuss_init(void)
 	sar_base = omap4_get_sar_ram_base();
 	gic_dist_base = omap4_get_gic_dist_base();
 	gic_cpu_base = omap4_get_gic_cpu_base();
+
+	create_suspend_pgtable();
 
 	if (omap_rev() == OMAP4430_REV_ES1_0) {
 		WARN(1, "Power Management not supported on OMAP4430 ES1.0\n");
