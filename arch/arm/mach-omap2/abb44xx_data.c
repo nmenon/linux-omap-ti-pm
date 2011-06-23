@@ -13,6 +13,11 @@
 #include "prm44xx.h"
 #include "prm-regbits-44xx.h"
 
+static const struct omap_abb_ops omap4_abb_ops = {
+	.check_tranxdone	= &omap4_prm_abb_check_tranxdone,
+	.clear_tranxdone	= &omap4_prm_abb_clear_tranxdone,
+};
+
 static const struct omap_abb_common omap4_abb_common = {
 	.opp_sel_mask		= OMAP4430_OPP_SEL_MASK,
 	.opp_sel_shift		= OMAP4430_OPP_SEL_SHIFT,
@@ -25,6 +30,7 @@ static const struct omap_abb_common omap4_abb_common = {
 	.sr2_wtcnt_value_shift	= OMAP4430_SR2_WTCNT_VALUE_SHIFT,
 	.settling_time		= 50,
 	.cycle_rate		= 16,
+	.ops			= &omap4_abb_ops,
 };
 
 struct omap_abb_instance omap4_abb_mpu = {

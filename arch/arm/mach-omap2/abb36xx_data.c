@@ -13,6 +13,11 @@
 #include "prm2xxx_3xxx.h"
 #include "prm-regbits-34xx.h"
 
+static const struct omap_abb_ops omap36xx_abb_ops = {
+	.check_tranxdone	= &omap36xx_prm_abb_check_tranxdone,
+	.clear_tranxdone	= &omap36xx_prm_abb_clear_tranxdone,
+};
+
 static const struct omap_abb_common omap36xx_abb_common = {
 	.opp_sel_mask		= OMAP3630_OPP_SEL_MASK,
 	.opp_sel_shift		= OMAP3630_OPP_SEL_SHIFT,
@@ -25,6 +30,7 @@ static const struct omap_abb_common omap36xx_abb_common = {
 	.sr2_wtcnt_value_shift	= OMAP3630_SR2_WTCNT_VALUE_SHIFT,
 	.settling_time		= 30,
 	.cycle_rate		= 8,
+	.ops			= &omap36xx_abb_ops,
 };
 
 struct omap_abb_instance omap36xx_abb_mpu = {

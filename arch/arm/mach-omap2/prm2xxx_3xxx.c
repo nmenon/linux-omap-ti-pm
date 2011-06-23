@@ -212,3 +212,17 @@ u32 omap3_prm_vcvp_rmw(u32 mask, u32 bits, u8 offset)
 {
 	return omap2_prm_rmw_mod_reg_bits(mask, bits, OMAP3430_GR_MOD, offset);
 }
+
+u32 omap36xx_prm_abb_check_tranxdone(u32 mask, u16 reg)
+{
+	u32 irqstatus;
+
+	irqstatus = omap2_prm_read_mod_reg(OCP_MOD, reg);
+
+	return irqstatus & mask;
+}
+
+void omap36xx_prm_abb_clear_tranxdone(u32 bits, u16 reg)
+{
+	omap2_prm_rmw_mod_reg_bits(bits, bits, OCP_MOD, reg);
+}

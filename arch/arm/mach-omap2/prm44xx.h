@@ -776,6 +776,8 @@ extern void omap4_prm_global_warm_sw_reset(void);
 /* OMAP4-specific VP functions */
 u32 omap4_prm_vp_check_txdone(u8 vp_id);
 void omap4_prm_vp_clear_txdone(u8 vp_id);
+u32 omap4_prm_abb_check_tranxdone(u32 mask, u16 reg);
+void omap4_prm_abb_clear_tranxdone(u32 bits, u16 reg);
 
 /*
  * OMAP4 access functions for voltage controller (VC) and
