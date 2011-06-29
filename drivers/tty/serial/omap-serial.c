@@ -906,10 +906,12 @@ serial_omap_pm(struct uart_port *port, unsigned int state,
 {
 	struct uart_omap_port *up = (struct uart_omap_port *)port;
 	unsigned char efr;
+	unsigned char lcr;
 
 	dev_dbg(up->port.dev, "serial_omap_pm+%d\n", up->pdev->id);
 
 	serial_omap_port_enable(up);
+	lcr = serial_in(up, UART_LCR);
 	serial_out(up, UART_LCR, UART_LCR_CONF_MODE_B);
 	efr = serial_in(up, UART_EFR);
 	serial_out(up, UART_EFR, efr | UART_EFR_ECB);
@@ -919,6 +921,7 @@ serial_omap_pm(struct uart_port *port, unsigned int state,
 	serial_out(up, UART_LCR, UART_LCR_CONF_MODE_B);
 	serial_out(up, UART_EFR, efr);
 	serial_out(up, UART_LCR, 0);
+	serial_out(up, UART_LCR, lcr);
 	if (state)
 		pm_runtime_put_sync(&up->pdev->dev);
 	else
