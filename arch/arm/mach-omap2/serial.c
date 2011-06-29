@@ -215,11 +215,13 @@ static bool omap_uart_chk_wakeup(struct platform_device *pdev)
 		ret = true;
 
 	if (up->wk_en && up->wk_mask) {
-		/* Check for normal UART wakeup (and clear it) */
-		wkst = __raw_readl(up->wk_st) & up->wk_mask;
-		if (wkst) {
-			__raw_writel(wkst, up->wk_st);
-			ret = true;
+		if (up->wk_st) {
+			/* Check for normal UART wakeup (and clear it) */
+			wkst = __raw_readl(up->wk_st) & up->wk_mask;
+			if (wkst) {
+				__raw_writel(wkst, up->wk_st);
+				ret = true;
+			}
 		}
 	}
 
