@@ -1235,7 +1235,6 @@ static void serial_omap_rxdma_poll(unsigned long uart_no)
 			serial_omap_stop_rxdma(up);
 			up->ier |= (UART_IER_RDI | UART_IER_RLSI);
 			serial_out(up, UART_IER, up->ier);
-			serial_omap_port_disable(up);
 		}
 		return;
 	}
@@ -1584,6 +1583,7 @@ static int omap_serial_runtime_suspend(struct device *dev)
 	if (!up)
 		goto done;
 
+	up->context_loss_cnt = omap_device_get_context_loss_count(up->pdev);
 	if (device_may_wakeup(dev))
 		up->enable_wakeup(up->pdev, true);
 	else
@@ -1598,7 +1598,9 @@ static int omap_serial_runtime_resume(struct device *dev)
 	struct omap_device *od;
 
 	if (up) {
-		omap_uart_restore_context(up);
+		u32 loss_cnt = omap_device_get_context_loss_count(up->pdev);
+		if (up->context_loss_cnt < loss_cnt)
+			omap_uart_restore_context(up);
 
 		if (up->use_dma) {
 			/* NO TX_DMA WAKEUP SO KEEP IN NO IDLE MODE */
