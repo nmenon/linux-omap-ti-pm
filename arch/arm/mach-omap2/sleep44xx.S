@@ -30,6 +30,25 @@
 #define TABLE_ADDRESS_OFFSET			0x04
 #define CR_VALUE_OFFSET				0x08
 #define SCU_POWER_SECURE_INDEX			0x108
+#define CPU0_CLKSTCTRL				0x48243418
+#define CPU1_CLKSTCTRL				0x48243818
+/*
+ * Macro to call PPA svc when MMU is OFF
+ * Caller must setup r0 and r3 before calling this macro
+ * @r0: PPA service ID
+ * @r3: Pointer to params
+*/
+.macro ppa_service_api
+	mov	r1, #0x0        @ Process ID
+	mov	r2, #0x4	@ Flag
+	mov	r6, #0xff
+	mov	r12, #0x00      @ Secure Service ID
+	dsb
+	smc     #0
+.endm
+
+ppa_zero_params:
+	.word		0x0
 
 
 /*
@@ -194,6 +213,14 @@ skip_scu_gp_set:
 	isb
 	dsb
 
+	mrc	p15, 0, r0, c1, c1, 2		@Read NSACR data
+	tst	r0, #(1 << 18)
+	mrcne	p15, 0, r0, c1, c0, 1
+	bicne	r0, r0, #(1 << 6)
+	mcrne	p15, 0, r0, c1, c0, 1
+	isb
+
+
 #ifdef CONFIG_CACHE_L2X0
 	/*
 	 * Clean and invalidate the L2 cache.
@@ -255,6 +282,13 @@ do_WFI:
 	tst	r0, #(1 << 2)			@ Check C bit enabled?
 	orreq	r0, r0, #(1 << 2)		@ Enable the C bit
 	mcreq	p15, 0, r0, c1, c0, 0
+	isb
+
+	/* Enable SMP bit if it's being disabled */
+	mrc	p15, 0, r0, c1, c0, 1
+	tst	r0, #(1 << 6)			@ Check SMP bit enabled?
+	orreq	r0, r0, #(1 << 6)
+	mcreq	p15, 0, r0, c1, c0, 1
 	isb
 
 	/*
@@ -350,6 +384,38 @@ skip_por:
 	dsb
 skip_l2en:
 #endif
+	/* Enable NS SMP bit access on CPU1 */
+	mrc	p15, 0, r0, c1, c1, 2		@ Read NSACR data
+	tst	r0, #(1 << 18)
+	bne	skip_ns_smp_enable		@ SMP bit access granted.
+	ldr	r8, =OMAP44XX_SAR_RAM_BASE
+	ldr	r9, [r8, #OMAP_TYPE_OFFSET]
+	cmp	r9, #0x1			@ Skip if GP device
+	bne	skip_ns_smp_enable
+	mrc	p15, 0, r0, c0, c0, 5
+	ands	r0, r0, #0x0f			@ CPU 0 SMP bit access granted
+	beq	skip_ns_smp_enable		@ by PPA init so skip.
+ppa_retry:
+	mov     r0, #PPA_SERVICE_NS_SMP
+	adr	r3, ppa_zero_params		@ Pointer to parameters
+	ppa_service_api
+	isb
+	dsb
+	cmp	r0, #0x0			@ API returns 0 on success.
+	beq	enable_smp_bit
+	ldr	r0, =CPU0_CLKSTCTRL
+	mov	r1, #2				@ Wakeup CPU0 for PPA service.
+	str	r1, [r0]
+	mov	r1, #3
+	str	r1, [r0]
+	b	ppa_retry
+enable_smp_bit:
+	mrc	p15, 0, r0, c1, c0, 1
+	tst	r0, #(1 << 6)			@ Check SMP bit enabled?
+	orreq	r0, r0, #(1 << 6)
+	mcreq	p15, 0, r0, c1, c0, 1
+	isb
+skip_ns_smp_enable:
 
 	/*
 	 * Check the wakeup cpuid and use appropriate
