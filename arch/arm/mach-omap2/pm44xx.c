@@ -40,6 +40,7 @@
 
 #include "smartreflex.h"
 #include "voltage.h"
+#include "vc.h"
 
 struct power_state {
 	struct powerdomain *pwrdm;
@@ -95,12 +96,25 @@ void omap4_enter_sleep(unsigned int cpu, unsigned int power_state)
 	core_next_state = pwrdm_read_next_pwrst(core_pwrdm);
 	mpu_next_state = pwrdm_read_next_pwrst(mpu_pwrdm);
 
-	if (mpu_next_state < PWRDM_POWER_INACTIVE)
+	if (mpu_next_state < PWRDM_POWER_INACTIVE) {
 		omap_sr_disable(mpu_voltdm);
+		omap_vc_set_auto_trans(mpu_voltdm,
+				OMAP_VC_CHANNEL_AUTO_TRANSITION_RETENTION);
+	}
 
 	if (core_next_state < PWRDM_POWER_ON) {
 		omap_sr_disable(iva_voltdm);
 		omap_sr_disable(core_voltdm);
+		/*
+		 * Note: IVA can hit RET outside of cpuidle and hence this is
+		 * not the right optimal place to enable IVA AUTO RET. But since
+		 * enabling AUTO RET requires SR to disabled, its done here for
+		 * now. Needs a relook to see if this can be optimized.
+		 */
+		omap_vc_set_auto_trans(core_voltdm,
+				OMAP_VC_CHANNEL_AUTO_TRANSITION_RETENTION);
+		omap_vc_set_auto_trans(iva_voltdm,
+				OMAP_VC_CHANNEL_AUTO_TRANSITION_RETENTION);
 
 		omap_uart_prepare_idle(0);
 		omap_uart_prepare_idle(1);
@@ -113,6 +127,11 @@ void omap4_enter_sleep(unsigned int cpu, unsigned int power_state)
 	omap4_enter_lowpower(cpu, power_state);
 
 	if (core_next_state < PWRDM_POWER_ON) {
+		/* See note above */
+		omap_vc_set_auto_trans(core_voltdm,
+				OMAP_VC_CHANNEL_AUTO_TRANSITION_DISABLE);
+		omap_vc_set_auto_trans(iva_voltdm,
+				OMAP_VC_CHANNEL_AUTO_TRANSITION_DISABLE);
 		omap2_gpio_resume_after_idle();
 		omap_uart_resume_idle(0);
 		omap_uart_resume_idle(1);
@@ -122,8 +141,11 @@ void omap4_enter_sleep(unsigned int cpu, unsigned int power_state)
 		omap_sr_enable(core_voltdm);
 	}
 
-	if (mpu_next_state < PWRDM_POWER_INACTIVE)
+	if (mpu_next_state < PWRDM_POWER_INACTIVE) {
+		omap_vc_set_auto_trans(mpu_voltdm,
+				OMAP_VC_CHANNEL_AUTO_TRANSITION_DISABLE);
 		omap_sr_enable(mpu_voltdm);
+	}
 
 	return;
 }
@@ -419,18 +441,27 @@ static int __init omap4_pm_init(void)
 	if (!mpu_voltdm) {
 		pr_err("%s: Failed to get voltdm for VDD MPU\n", __func__);
 		goto err2;
+	} else {
+		omap_vc_set_auto_trans(mpu_voltdm,
+				OMAP_VC_CHANNEL_AUTO_TRANSITION_DISABLE);
 	}
 
 	iva_voltdm = voltdm_lookup("iva");
 	if (!iva_voltdm) {
 		pr_err("%s: Failed to get voltdm for VDD IVA\n", __func__);
 		goto err2;
+	} else {
+		omap_vc_set_auto_trans(iva_voltdm,
+				OMAP_VC_CHANNEL_AUTO_TRANSITION_DISABLE);
 	}
 
 	core_voltdm = voltdm_lookup("core");
 	if (!core_voltdm) {
 		pr_err("%s: Failed to get voltdm for VDD CORE\n", __func__);
 		goto err2;
+	} else {
+		omap_vc_set_auto_trans(core_voltdm,
+				OMAP_VC_CHANNEL_AUTO_TRANSITION_DISABLE);
 	}
 
 	ret = omap4_mpuss_init();
