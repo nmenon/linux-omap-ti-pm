@@ -25,9 +25,13 @@
 #include "clock44xx.h"
 #include "cm.h"
 #include "cm1_44xx.h"
+#include "cm2_44xx.h"
+#include "cminst44xx.h"
 #include "clock44xx.h"
 #include "clockdomain.h"
 #include "cm-regbits-44xx.h"
+#include "prcm44xx.h"
+
 #define MAX_FREQ_UPDATE_TIMEOUT  100000
 
 static struct clockdomain *l3_emif_clkdm;
@@ -163,6 +167,9 @@ int omap4_prcm_freq_update(void)
 
 	return 0;
 }
+
+#define MAX_MODULE_ENABLE_WAIT	100000
+#define MAX_DPLL_WAIT_TRIES	1000000
 
 #define OMAP_1GHz	1000000000
 #define OMAP_920MHz	920000000
@@ -380,4 +387,189 @@ long omap4_dpll_regm4xen_round_rate(struct clk *clk, unsigned long target_rate)
                clk->dpll_data->last_rounded_rate *= OMAP4430_REGM4XEN_MULT;
 
        return clk->dpll_data->last_rounded_rate;
+}
+
+#define NO_DPLL_RESTORE	5
+
+struct tuple {
+	u16 addr;
+	u32 val;
+};
+
+struct omap4_dpll_regs {
+	u32 mod_partition;
+	u32 mod_inst;
+	struct tuple clkmode;
+	struct tuple autoidle;
+	struct tuple idlest;
+	struct tuple clksel;
+	struct tuple div_m2;
+	struct tuple div_m3;
+	struct tuple div_m4;
+	struct tuple div_m5;
+	struct tuple div_m6;
+	struct tuple div_m7;
+	struct tuple clkdcoldo;
+};
+
+static struct omap4_dpll_regs dpll_regs[NO_DPLL_RESTORE] = {
+	/* MPU DPLL */
+	{ OMAP4430_CM1_PARTITION, OMAP4430_CM1_CKGEN_INST,
+	 {OMAP4_CM_CLKMODE_DPLL_MPU_OFFSET, 0x0},
+	 {OMAP4_CM_AUTOIDLE_DPLL_MPU_OFFSET, 0x0},
+	 {OMAP4_CM_IDLEST_DPLL_MPU_OFFSET, 0x0},
+	 {OMAP4_CM_CLKSEL_DPLL_MPU_OFFSET, 0x0},
+	 {OMAP4_CM_DIV_M2_DPLL_MPU_OFFSET, 0x0},
+	},
+	/* IVA DPLL */
+	{ OMAP4430_CM1_PARTITION, OMAP4430_CM1_CKGEN_INST,
+	 {OMAP4_CM_CLKMODE_DPLL_IVA_OFFSET, 0x0},
+	 {OMAP4_CM_AUTOIDLE_DPLL_IVA_OFFSET, 0x0},
+	 {OMAP4_CM_IDLEST_DPLL_IVA_OFFSET, 0x0},
+	 {OMAP4_CM_CLKSEL_DPLL_IVA_OFFSET, 0x0},
+	 {0x0, 0x0},
+	 {0x0, 0x0},
+	 {OMAP4_CM_DIV_M4_DPLL_IVA_OFFSET, 0x0},
+	 {OMAP4_CM_DIV_M5_DPLL_IVA_OFFSET, 0x0},
+	},
+	/* ABE DPLL */
+	{ OMAP4430_CM1_PARTITION, OMAP4430_CM1_CKGEN_INST,
+	 {OMAP4_CM_CLKMODE_DPLL_ABE_OFFSET, 0x0},
+	 {OMAP4_CM_AUTOIDLE_DPLL_ABE_OFFSET, 0x0},
+	 {OMAP4_CM_IDLEST_DPLL_ABE_OFFSET, 0x0},
+	 {OMAP4_CM_CLKSEL_DPLL_ABE_OFFSET, 0x0},
+	 {OMAP4_CM_DIV_M2_DPLL_ABE_OFFSET, 0x0},
+	 {OMAP4_CM_DIV_M3_DPLL_ABE_OFFSET, 0x0},
+	},
+	/* USB DPLL */
+	{ OMAP4430_CM2_PARTITION, OMAP4430_CM2_CKGEN_INST,
+	 {OMAP4_CM_CLKMODE_DPLL_USB_OFFSET, 0x0},
+	 {OMAP4_CM_AUTOIDLE_DPLL_USB_OFFSET, 0x0},
+	 {OMAP4_CM_IDLEST_DPLL_USB_OFFSET, 0x0},
+	 {OMAP4_CM_CLKSEL_DPLL_USB_OFFSET, 0x0},
+	 {OMAP4_CM_DIV_M2_DPLL_USB_OFFSET, 0x0},
+	 {0x0, 0x0},
+	 {0x0, 0x0},
+	 {0x0, 0x0},
+	 {0x0, 0x0},
+	 {0x0, 0x0},
+	 {OMAP4_CM_CLKDCOLDO_DPLL_USB_OFFSET, 0x0},
+	 },
+	/* PER DPLL */
+	{ OMAP4430_CM2_PARTITION, OMAP4430_CM2_CKGEN_INST,
+	 {OMAP4_CM_CLKMODE_DPLL_PER_OFFSET, 0x0},
+	 {OMAP4_CM_AUTOIDLE_DPLL_PER_OFFSET, 0x0},
+	 {OMAP4_CM_IDLEST_DPLL_PER_OFFSET, 0x0},
+	 {OMAP4_CM_CLKSEL_DPLL_PER_OFFSET, 0x0},
+
+	 {OMAP4_CM_DIV_M2_DPLL_PER_OFFSET, 0x0},
+	 {OMAP4_CM_DIV_M3_DPLL_PER_OFFSET, 0x0},
+	 {OMAP4_CM_DIV_M4_DPLL_PER_OFFSET, 0x0},
+	 {OMAP4_CM_DIV_M5_DPLL_PER_OFFSET, 0x0},
+	 {OMAP4_CM_DIV_M6_DPLL_PER_OFFSET, 0x0},
+	 {OMAP4_CM_DIV_M7_DPLL_PER_OFFSET, 0x0},
+	},
+};
+
+void omap4_dpll_prepare_off(void)
+{
+	u32 i;
+
+	for (i = 0; i < NO_DPLL_RESTORE; i++) {
+		dpll_regs[i].clkmode.val = omap4_cminst_read_inst_reg(
+			dpll_regs[i].mod_partition,
+			dpll_regs[i].mod_inst,
+			dpll_regs[i].clkmode.addr);
+		dpll_regs[i].autoidle.val = omap4_cminst_read_inst_reg(
+			dpll_regs[i].mod_partition,
+			dpll_regs[i].mod_inst,
+			dpll_regs[i].autoidle.addr);
+		dpll_regs[i].clksel.val = omap4_cminst_read_inst_reg(
+			dpll_regs[i].mod_partition,
+			dpll_regs[i].mod_inst,
+			dpll_regs[i].clksel.addr);
+		dpll_regs[i].div_m2.val = dpll_regs[i].div_m2.addr ?
+			omap4_cminst_read_inst_reg(dpll_regs[i].mod_partition,
+			dpll_regs[i].mod_inst, dpll_regs[i].div_m2.addr) : 0;
+		dpll_regs[i].div_m3.val = dpll_regs[i].div_m3.addr ?
+			omap4_cminst_read_inst_reg(dpll_regs[i].mod_partition,
+			dpll_regs[i].mod_inst, dpll_regs[i].div_m3.addr) : 0;
+		dpll_regs[i].div_m4.val = dpll_regs[i].div_m4.addr ?
+			omap4_cminst_read_inst_reg(dpll_regs[i].mod_partition,
+			dpll_regs[i].mod_inst, dpll_regs[i].div_m4.addr) : 0;
+		dpll_regs[i].div_m5.val = dpll_regs[i].div_m5.addr ?
+			omap4_cminst_read_inst_reg(dpll_regs[i].mod_partition,
+			dpll_regs[i].mod_inst, dpll_regs[i].div_m5.addr) : 0;
+		dpll_regs[i].div_m6.val = dpll_regs[i].div_m6.addr ?
+			omap4_cminst_read_inst_reg(dpll_regs[i].mod_partition,
+			dpll_regs[i].mod_inst, dpll_regs[i].div_m6.addr) : 0;
+		dpll_regs[i].div_m7.val = dpll_regs[i].div_m7.addr ?
+			omap4_cminst_read_inst_reg(dpll_regs[i].mod_partition,
+			dpll_regs[i].mod_inst, dpll_regs[i].div_m7.addr) : 0;
+		dpll_regs[i].clkdcoldo.val = dpll_regs[i].clkdcoldo.addr ?
+			omap4_cminst_read_inst_reg(dpll_regs[i].mod_partition,
+			dpll_regs[i].mod_inst, dpll_regs[i].clkdcoldo.addr) : 0;
+	}
+	return;
+}
+
+void omap4_dpll_resume_off(void)
+{
+	u32 i, j;
+
+	for (i = 0; i < NO_DPLL_RESTORE; i++) {
+		omap4_cminst_write_inst_reg(dpll_regs[i].clksel.val,
+			dpll_regs[i].mod_partition, dpll_regs[i].mod_inst,
+			dpll_regs[i].clksel.addr);
+		if (dpll_regs[i].div_m2.addr)
+			omap4_cminst_write_inst_reg(dpll_regs[i].div_m2.val,
+			dpll_regs[i].mod_partition, dpll_regs[i].mod_inst,
+			dpll_regs[i].div_m2.addr);
+		if (dpll_regs[i].div_m3.addr)
+			omap4_cminst_write_inst_reg(dpll_regs[i].div_m3.val,
+			dpll_regs[i].mod_partition, dpll_regs[i].mod_inst,
+			dpll_regs[i].div_m3.addr);
+		if (dpll_regs[i].div_m4.addr)
+			omap4_cminst_write_inst_reg(dpll_regs[i].div_m4.val,
+			dpll_regs[i].mod_partition, dpll_regs[i].mod_inst,
+			dpll_regs[i].div_m4.addr);
+		if (dpll_regs[i].div_m5.addr)
+			omap4_cminst_write_inst_reg(dpll_regs[i].div_m5.val,
+			dpll_regs[i].mod_partition, dpll_regs[i].mod_inst,
+			dpll_regs[i].div_m5.addr);
+		if (dpll_regs[i].div_m6.addr)
+			omap4_cminst_write_inst_reg(dpll_regs[i].div_m6.val,
+			dpll_regs[i].mod_partition, dpll_regs[i].mod_inst,
+			dpll_regs[i].div_m6.addr);
+		if (dpll_regs[i].div_m7.addr)
+			omap4_cminst_write_inst_reg(dpll_regs[i].div_m7.val,
+			dpll_regs[i].mod_partition, dpll_regs[i].mod_inst,
+			dpll_regs[i].div_m7.addr);
+		if (dpll_regs[i].clkdcoldo.addr)
+			omap4_cminst_write_inst_reg(dpll_regs[i].clkdcoldo.val,
+			dpll_regs[i].mod_partition, dpll_regs[i].mod_inst,
+			dpll_regs[i].clkdcoldo.addr);
+		/* Restore clkmode only after all other registers are restored */
+		omap4_cminst_write_inst_reg(dpll_regs[i].clkmode.val,
+			dpll_regs[i].mod_partition, dpll_regs[i].mod_inst,
+			dpll_regs[i].clkmode.addr);
+
+		j = 0;
+		/* Should we wait for DPLL to get locked? */
+		if ((dpll_regs[i].clkmode.val & OMAP4430_DPLL_EN_MASK) == OMAP4430_DPLL_EN_MASK) {
+			while (((omap4_cminst_read_inst_reg(dpll_regs[i].mod_partition,
+				 dpll_regs[i].mod_inst, dpll_regs[i].idlest.addr)
+				 & OMAP4430_ST_DPLL_CLK_MASK) != 0x1) &&
+					j < MAX_DPLL_WAIT_TRIES) {
+						j++;
+						udelay(1);
+				}
+		}
+
+		/* restore autoidle settings after the dpll is locked */
+		omap4_cminst_write_inst_reg(dpll_regs[i].autoidle.val, dpll_regs[i].mod_partition,
+			dpll_regs[i].mod_inst, dpll_regs[i].autoidle.addr);
+
+	}
+	return;
 }
