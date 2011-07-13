@@ -238,10 +238,12 @@ const u32 sar_ram1_layout[NB_REGS_CONST_SETS_RAM1_HW][4] = {
 	OMAP4_CM_L3INIT_USB_TLL_CLKCTRL_RESTORE_OFFSET, 1, 0x000002F0},
 	{CM2_INDEX, OMAP4430_CM2_RESTORE_INST +
 		OMAP4_CM_SDMA_STATICDEP_RESTORE_OFFSET, 1, 0x000002F4},
+#if 0
 	{USBTLL_INDEX, 0x400, 7, 0x000002F8},
 	{UHH_INDEX, 0x10, 1, 0x00000314},
 	{UHH_INDEX, 0x40, 1, 0x00000318},
 	{UHH_INDEX, 0x100, 384, 0x0000031C},
+#endif
 	{CM2_INDEX, OMAP4430_CM2_RESTORE_INST +
 	OMAP4_CM_L3INIT_USB_HOST_CLKCTRL_RESTORE_OFFSET, 1, 0x0000091C},
 	{CM2_INDEX, OMAP4430_CM2_RESTORE_INST +
@@ -454,16 +456,21 @@ void omap4_sar_save(void)
 	/*
 	 * SAR bits and clocks needs to be enabled
 	 */
+#if 0
 	pwrdm_enable_hdwr_sar(l3init_pwrdm);
 	clk_enable(usb_host_ck);
 	clk_enable(usb_tll_ck);
+#endif
 
 	/* Save SAR BANK1 */
-	sar_save(NB_REGS_CONST_SETS_RAM1_HW, SAR_BANK1_OFFSET, sar_ram1_layout);
+	//sar_save(NB_REGS_CONST_SETS_RAM1_HW, SAR_BANK1_OFFSET, sar_ram1_layout);
+	sar_save(NB_REGS_CONST_SETS_RAM1_HW - 4, SAR_BANK1_OFFSET, sar_ram1_layout);
 
+#if 0
 	pwrdm_disable_hdwr_sar(l3init_pwrdm);
 	clk_disable(usb_host_ck);
 	clk_disable(usb_tll_ck);
+#endif
 
 	/* Save SAR BANK2 */
 	sar_save(NB_REGS_CONST_SETS_RAM2_HW, SAR_BANK2_OFFSET, sar_ram2_layout);
