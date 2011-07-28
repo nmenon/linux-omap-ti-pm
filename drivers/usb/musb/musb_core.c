@@ -1941,7 +1941,11 @@ musb_init_controller(struct device *dev, int nIrq, void __iomem *ctrl)
 
 	pm_runtime_use_autosuspend(musb->controller);
 	pm_runtime_set_autosuspend_delay(musb->controller, 200);
+	pm_runtime_use_autosuspend(musb->controller->parent);
+	pm_runtime_set_autosuspend_delay(musb->controller->parent, 500);
+	pm_suspend_ignore_children(musb->controller->parent,true);
 	pm_runtime_enable(musb->controller);
+	pm_runtime_irq_safe(musb->controller);
 
 	spin_lock_init(&musb->lock);
 	musb->board_mode = plat->mode;
@@ -2376,6 +2380,9 @@ static int musb_runtime_suspend(struct device *dev)
 
 	musb_save_context(musb);
 
+	pm_runtime_mark_last_busy(musb->controller->parent);
+	pm_runtime_put_autosuspend(musb->controller->parent);
+
 	return 0;
 }
 
@@ -2393,6 +2400,8 @@ static int musb_runtime_resume(struct device *dev)
 	 * Also context restore without save does not make
 	 * any sense
 	 */
+	if (pm_runtime_suspended(dev->parent))
+		pm_runtime_get_sync(dev->parent);
 	if (!first)
 		musb_restore_context(musb);
 	first = 0;

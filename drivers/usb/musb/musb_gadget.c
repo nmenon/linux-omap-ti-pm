@@ -1706,7 +1706,7 @@ static int musb_gadget_pullup(struct usb_gadget *gadget, int is_on)
 		musb->softconnect = is_on;
 		pm_runtime_get_sync(musb->controller);
 		musb_pullup(musb, is_on);
-		pm_runtime_put(musb->controller);
+		pm_runtime_put_sync_suspend(musb->controller);
 	}
 	spin_unlock_irqrestore(&musb->lock, flags);
 	return 0;

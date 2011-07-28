@@ -483,6 +483,7 @@ static int __init omap2430_probe(struct platform_device *pdev)
 	}
 
 	pm_runtime_enable(&pdev->dev);
+	pm_runtime_irq_safe(&pdev->dev);
 
 	return 0;
 
@@ -528,7 +529,8 @@ static int omap2430_runtime_resume(struct device *dev)
 	struct musb			*musb = glue_to_musb(glue);
 
 	omap2430_low_level_init(musb);
-	otg_set_suspend(musb->xceiv, 0);
+	if (musb->xceiv)
+		otg_set_suspend(musb->xceiv, 0);
 
 	return 0;
 }
