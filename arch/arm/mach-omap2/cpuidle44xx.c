@@ -122,6 +122,9 @@ static int omap4_enter_idle(struct cpuidle_device *dev,
 	u32 cpu1_state;
 	int cpu_id = smp_processor_id();
 
+	if (!omap_pm_is_ready())
+		return -EBUSY;
+
 	/* Used to keep track of the total time in idle */
 	getnstimeofday(&ts_preidle);
 
