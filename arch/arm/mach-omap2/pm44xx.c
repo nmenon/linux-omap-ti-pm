@@ -465,6 +465,18 @@ static const struct platform_suspend_ops omap_pm_ops = {
 void omap4_enter_sleep(unsigned int cpu, unsigned int power_state){ return; }
 #endif /* CONFIG_SUSPEND */
 
+static u8 get_achievable_state(u8 available_states, u8 req_lowest_state)
+{
+	u8 state = req_lowest_state; /* start at the lowest point */
+
+	while (!(available_states & (1 << state))) {
+		if (state == PWRDM_POWER_ON)
+			break;
+		state++;
+	}
+	return state;
+}
+
 /**
  * omap4_pm_off_mode_enable :
  *	Program all powerdomain to OFF
@@ -473,23 +485,29 @@ void omap4_pm_off_mode_enable(int enable)
 {
 	struct power_state *pwrst;
 	u32 state;
-	u32 logic_state;
+	u32 logic_state, als;
 
 	if (enable) {
 		state = PWRDM_POWER_OFF;
 		logic_state = PWRDM_POWER_OFF;
 	} else {
 		state = PWRDM_POWER_RET;
+#ifdef CONFIG_OMAP_ALLOW_OSWR
+		logic_state = PWRDM_POWER_OFF;
+#else
 		logic_state = PWRDM_POWER_RET;
+#endif
 	}
 
 	list_for_each_entry(pwrst, &pwrst_list, node) {
-		pwrdm_set_logic_retst(pwrst->pwrdm, logic_state);
-		if ((state == PWRDM_POWER_OFF) &&
-			!(pwrst->pwrdm->pwrsts & (1 << state)))
-			pwrst->next_state = PWRDM_POWER_RET;
-		else
-			pwrst->next_state = state;
+		if ((!strcmp(pwrst->pwrdm->name, "cpu0_pwrdm")) ||
+			(!strcmp(pwrst->pwrdm->name, "cpu1_pwrdm")))
+				continue;
+		als = get_achievable_state(pwrst->pwrdm->pwrsts_logic_ret,
+				logic_state);
+		pwrdm_set_logic_retst(pwrst->pwrdm, als);
+		pwrst->next_state = get_achievable_state(pwrst->pwrdm->pwrsts,
+					state);
 		omap_set_pwrdm_state(pwrst->pwrdm, pwrst->next_state);
 	}
 }
