@@ -40,6 +40,11 @@ static const struct omap_vfsm_instance omap4_vdd_mpu_vfsm = {
 				OMAP4430_RAMP_DOWN_COUNT_MASK |
 				OMAP4430_RAMP_UP_PRESCAL_MASK |
 				OMAP4430_RAMP_UP_COUNT_MASK,
+	.voltsetupoff_reg = OMAP4_PRM_VOLTSETUP_MPU_OFF_OFFSET,
+	.voltsetupoff_mask =	OMAP4430_RAMP_DOWN_PRESCAL_MASK |
+				OMAP4430_RAMP_DOWN_COUNT_MASK |
+				OMAP4430_RAMP_UP_PRESCAL_MASK |
+				OMAP4430_RAMP_UP_COUNT_MASK,
 };
 
 static struct omap_vdd_info omap4_vdd_mpu_info;
@@ -50,6 +55,11 @@ static const struct omap_vfsm_instance omap4_vdd_iva_vfsm = {
 				OMAP4430_RAMP_DOWN_COUNT_MASK |
 				OMAP4430_RAMP_UP_PRESCAL_MASK |
 				OMAP4430_RAMP_UP_COUNT_MASK,
+	.voltsetupoff_reg = OMAP4_PRM_VOLTSETUP_IVA_OFF_OFFSET,
+	.voltsetupoff_mask =	OMAP4430_RAMP_DOWN_PRESCAL_MASK |
+				OMAP4430_RAMP_DOWN_COUNT_MASK |
+				OMAP4430_RAMP_UP_PRESCAL_MASK |
+				OMAP4430_RAMP_UP_COUNT_MASK,
 };
 
 static struct omap_vdd_info omap4_vdd_iva_info;
@@ -57,6 +67,11 @@ static struct omap_vdd_info omap4_vdd_iva_info;
 static const struct omap_vfsm_instance omap4_vdd_core_vfsm = {
 	.voltsetup_reg = OMAP4_PRM_VOLTSETUP_CORE_RET_SLEEP_OFFSET,
 	.voltsetup_mask =	OMAP4430_RAMP_DOWN_PRESCAL_MASK |
+				OMAP4430_RAMP_DOWN_COUNT_MASK |
+				OMAP4430_RAMP_UP_PRESCAL_MASK |
+				OMAP4430_RAMP_UP_COUNT_MASK,
+	.voltsetupoff_reg = OMAP4_PRM_VOLTSETUP_CORE_OFF_OFFSET,
+	.voltsetupoff_mask =	OMAP4430_RAMP_DOWN_PRESCAL_MASK |
 				OMAP4430_RAMP_DOWN_COUNT_MASK |
 				OMAP4430_RAMP_UP_PRESCAL_MASK |
 				OMAP4430_RAMP_UP_COUNT_MASK,
