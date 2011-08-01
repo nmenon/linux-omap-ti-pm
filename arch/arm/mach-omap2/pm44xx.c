@@ -370,20 +370,7 @@ static int omap4_pm_suspend(void)
 		pwrst->saved_logic_state = pwrdm_read_logic_retst(pwrst->pwrdm);
 	}
 
-	/* Set targeted power domain states by suspend */
-	list_for_each_entry(pwrst, &pwrst_list, node) {
-		if ((!strcmp(pwrst->pwrdm->name, "cpu0_pwrdm")) ||
-			(!strcmp(pwrst->pwrdm->name, "cpu1_pwrdm")))
-				continue;
-#ifdef CONFIG_OMAP_ALLOW_OSWR
-		/*OSWR is supported on silicon > ES2.0 */
-		if (pwrst->pwrdm->pwrsts_logic_ret == PWRSTS_OFF_RET)
-				pwrdm_set_logic_retst(pwrst->pwrdm,
-							PWRDM_POWER_OFF);
-#endif
-		pwrst->next_state = PWRDM_POWER_RET;
-		omap_set_pwrdm_state(pwrst->pwrdm, pwrst->next_state);
-	}
+	omap4_pm_off_mode_enable(enable_off_mode);
 
 	/* Enable Device OFF */
 	if (enable_off_mode)
