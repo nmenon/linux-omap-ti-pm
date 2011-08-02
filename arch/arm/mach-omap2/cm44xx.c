@@ -354,7 +354,7 @@ static void omap4_cm2_resume_off(void)
 	for (i = 0; i < NO_CM2_MODULES; i++) {
 		for (j = 0; j < cm2_regs[i].no_reg; j++) {
 			omap4_cminst_write_inst_reg(cm2_regs[i].reg[j].val,
-				OMAP4430_CM1_PARTITION,
+				OMAP4430_CM2_PARTITION,
 				cm2_regs[i].mod_off,
 				cm2_regs[i].reg[j].addr);
 		}
