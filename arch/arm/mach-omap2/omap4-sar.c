@@ -953,8 +953,11 @@ static int __init omap4_sar_ram_init(void)
 	if (!cpu_is_omap44xx())
 		return -ENODEV;
 
-	/* Static mapping, never released */
-	sar_ram_base = ioremap(OMAP44XX_SAR_RAM_BASE, SZ_8K);
+	/* 
+	 * Static mapping, never released Actual SAR area used is 8K it's
+	 * spaced over 16K address with some part is reserved.
+	 */
+	sar_ram_base = ioremap(OMAP44XX_SAR_RAM_BASE, SZ_16K);
 	BUG_ON(!sar_ram_base);
 
 	/*
