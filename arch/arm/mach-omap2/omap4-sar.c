@@ -46,7 +46,7 @@ static struct clk *usb_host_ck, *usb_tll_ck;
  *	{module_index, reg_offset, size, sar_ram_offset},
  * }
  */
-const u32 sar_ram1_layout[NB_REGS_CONST_SETS_RAM1_HW][4] = {
+const u32 sar_ram1_layout[][4] = {
 	{EMIF1_INDEX, OMAP44XX_EMIF_SDRAM_CONFIG, 1, 0x00000000},
 	{EMIF1_INDEX, OMAP44XX_EMIF_SDRAM_CONFIG_2, 1, 0x00000004},
 	{EMIF1_INDEX, OMAP44XX_EMIF_SDRAM_REF_CTRL, 1, 0x00000008},
@@ -254,7 +254,7 @@ const u32 sar_ram1_layout[NB_REGS_CONST_SETS_RAM1_HW][4] = {
 /*
  * SAR_RAM2 register layout consist of SYSCTRL_PADCONF_CORE regsiters
  */
-const u32 sar_ram2_layout[NB_REGS_CONST_SETS_RAM2_HW][4] = {
+const u32 sar_ram2_layout[][4] = {
 	{CTRL_MODULE_PAD_CORE_INDEX, 0x40, 102, 0x00000000},
 };
 
@@ -262,7 +262,7 @@ const u32 sar_ram2_layout[NB_REGS_CONST_SETS_RAM2_HW][4] = {
  * SAR_RAM3 and  SAR_RAM4 layout is not listed since moslty it's handle by
  * secure software.
  */
-const u32 sar_ram3_layout[NB_REGS_CONST_SETS_RAM3_HW][4] = {
+const u32 sar_ram3_layout[][4] = {
 	{L4CORE_INDEX, 0x2140, 1, 0x00000000},
 	{L4CORE_INDEX, 0x2104, 1, 0x00000004},
 	{L4CORE_INDEX, 0x2100, 1, 0x00000008},
@@ -387,7 +387,7 @@ const u32 sar_ram3_layout[NB_REGS_CONST_SETS_RAM3_HW][4] = {
 	{L4CORE_INDEX, 0x5DC, 1, 0x00000418},
 };
 
-const u32 omap446x_sar_ram1_layout[OMAP446X_NB_REGS_CONST_SETS_RAM1_HW][4] = {
+const u32 omap446x_sar_ram1_layout[][4] = {
 	{EMIF1_INDEX, OMAP44XX_EMIF_SDRAM_CONFIG_2, 1, 0x00000000},
 	{EMIF1_INDEX, OMAP44XX_EMIF_SDRAM_CONFIG, 1, 0x00000004},
 	{EMIF1_INDEX, OMAP44XX_EMIF_SDRAM_REF_CTRL, 1, 0x00000008},
@@ -596,7 +596,7 @@ const u32 omap446x_sar_ram1_layout[OMAP446X_NB_REGS_CONST_SETS_RAM1_HW][4] = {
 /*
  * SAR_RAM2 register layout consist of SYSCTRL_PADCONF_CORE regsiters
  */
-const u32 omap446x_sar_ram2_layout[OMAP446X_NB_REGS_CONST_SETS_RAM2_HW][4] = {
+const u32 omap446x_sar_ram2_layout[][4] = {
 	{CTRL_MODULE_PAD_CORE_INDEX, 0x40, 102, 0x00000000},
 	{CTRL_MODULE_PAD_CORE_INDEX, 0x1f4, 1, 0x00000198},
 };
@@ -605,7 +605,7 @@ const u32 omap446x_sar_ram2_layout[OMAP446X_NB_REGS_CONST_SETS_RAM2_HW][4] = {
  * SAR_RAM3 and  SAR_RAM4 layout is not listed since moslty it's handle by
  * secure software.
  */
-const u32 omap446x_sar_ram3_layout[OMAP446X_NB_REGS_CONST_SETS_RAM3_HW][4] = {
+const u32 omap446x_sar_ram3_layout[][4] = {
 	{L4CORE_INDEX, 0x2140, 1, 0x00000000},
 	{L4CORE_INDEX, 0x2104, 1, 0x00000004},
 	{L4CORE_INDEX, 0x2100, 1, 0x00000008},
@@ -783,9 +783,9 @@ static void save_sar_bank3(void)
 	clkdm_wakeup(l4_secure_clkdm);
 
 	if (cpu_is_omap446x())
-		sar_save(OMAP446X_NB_REGS_CONST_SETS_RAM3_HW, SAR_BANK3_OFFSET, omap446x_sar_ram3_layout);
+		sar_save(ARRAY_SIZE(omap446x_sar_ram3_layout), SAR_BANK3_OFFSET, omap446x_sar_ram3_layout);
 	else
-		sar_save(NB_REGS_CONST_SETS_RAM3_HW, SAR_BANK3_OFFSET, sar_ram3_layout);
+		sar_save(ARRAY_SIZE(sar_ram3_layout), SAR_BANK3_OFFSET, sar_ram3_layout);
 
 
 	clkdm_allow_idle(l4_secure_clkdm);
@@ -849,9 +849,9 @@ int omap4_sar_save(void)
 
 	/* Save SAR BANK1 */
 	if (cpu_is_omap446x())
-		sar_save(OMAP446X_NB_REGS_CONST_SETS_RAM1_HW, SAR_BANK1_OFFSET, omap446x_sar_ram1_layout);
+		sar_save(ARRAY_SIZE(omap446x_sar_ram1_layout), SAR_BANK1_OFFSET, omap446x_sar_ram1_layout);
 	else
-		sar_save(NB_REGS_CONST_SETS_RAM1_HW, SAR_BANK1_OFFSET, sar_ram1_layout);
+		sar_save(ARRAY_SIZE(sar_ram1_layout), SAR_BANK1_OFFSET, sar_ram1_layout);
  
 	clk_disable(usb_host_ck);
 	clk_disable(usb_tll_ck);
@@ -860,9 +860,9 @@ int omap4_sar_save(void)
 
 	/* Save SAR BANK2 */
 	if (cpu_is_omap446x())
-		sar_save(OMAP446X_NB_REGS_CONST_SETS_RAM2_HW, SAR_BANK2_OFFSET, omap446x_sar_ram2_layout);
+		sar_save(ARRAY_SIZE(omap446x_sar_ram2_layout), SAR_BANK2_OFFSET, omap446x_sar_ram2_layout);
 	else
-		sar_save(NB_REGS_CONST_SETS_RAM2_HW, SAR_BANK2_OFFSET, sar_ram2_layout);
+		sar_save(ARRAY_SIZE(sar_ram2_layout), SAR_BANK2_OFFSET, sar_ram2_layout);
 
 	return 0;
 }

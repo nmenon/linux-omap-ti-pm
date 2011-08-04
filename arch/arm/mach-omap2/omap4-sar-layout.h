@@ -40,15 +40,6 @@
  * The SAR RAM save regiter layout is fixed since restore is done by hardware.
  */
 
-#define NB_REGS_CONST_SETS_RAM1_HW		154
-#define NB_REGS_CONST_SETS_RAM2_HW		1
-#define NB_REGS_CONST_SETS_RAM3_HW		122
-#define NB_REGS_CONST_SETS_RAM4_HW		13
-
-#define OMAP446X_NB_REGS_CONST_SETS_RAM1_HW	155
-#define OMAP446X_NB_REGS_CONST_SETS_RAM2_HW	2
-#define OMAP446X_NB_REGS_CONST_SETS_RAM3_HW	127
-
 #define MODULE_ADDR_IDX				0
 #define MODULE_OFFSET_IDX			1
 #define MODULE_NB_REGS_IDX			2
