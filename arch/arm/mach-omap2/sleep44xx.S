@@ -32,6 +32,7 @@
 #define SCU_POWER_SECURE_INDEX			0x108
 #define CPU0_CLKSTCTRL				0x48243418
 #define CPU1_CLKSTCTRL				0x48243818
+
 /*
  * Macro to call PPA svc when MMU is OFF
  * Caller must setup r0 and r3 before calling this macro
@@ -335,6 +336,57 @@ ENDPROC(omap4_cpu_suspend)
  */
 
 ENTRY(omap4_cpu_resume)
+	/*
+	 * CPU1 must check if CPU0 is alive/awaken;
+	 * if PL310 is OFF, MPUSS was OFF and CPU0 is still off,
+	 * CPU1 must go to sleep and wait for CPU0
+	 */
+	mrc     p15, 0, r0, c0, c0, 5	@ Get cpuID
+	ands    r0, r0, #0x0f		@ Continue boot if CPU0
+	beq	continue_boot
+	ldr	r2, =OMAP44XX_L2CACHE_BASE
+	ldr	r0, [r2, #L2X0_CTRL]
+	and	r0, #0x0f
+	cmp	r0, #1
+	beq	continue_boot		@ CPU0 is already UP
+	ldr     r8, =OMAP44XX_SAR_RAM_BASE
+	ldr	r9, [r8, #OMAP_TYPE_OFFSET]
+	cmp	r9, #0x1		@ Check for HS device
+	bne	gp_set
+	mov	r0, #SCU_PM_POWEROFF	@ CPU1 to OFF state
+	mov	r1, #0x00
+	ldr	r12, =SCU_POWER_SECURE_INDEX
+	dsb
+	smc	#0
+	dsb
+	b	skip_for_hs
+gp_set:
+	ldr     r2, =OMAP44XX_SCU_BASE
+	mov     r3, #SCU_PM_POWEROFF
+	str     r3, [r2, #0x08]
+skip_for_hs:
+	dsb				@ Necessary barriers before wfi
+	dmb
+	isb
+	wfi				@ wait for interrupt
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+continue_boot:
+
 #ifdef CONFIG_CACHE_L2X0
 	/*
 	 * Restore the L2 AUXCTRL and enable the L2 cache.
