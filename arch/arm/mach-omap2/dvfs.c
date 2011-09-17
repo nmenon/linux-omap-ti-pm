@@ -28,6 +28,8 @@
 #include "powerdomain.h"
 #include "pm.h"
 
+#include <trace/events/omap.h>
+
 /**
  * DOC: Introduction
  * =================
@@ -887,6 +889,8 @@ int omap_device_scale(struct device *req_dev, struct device *target_dev,
 	struct device *dev;
 	int ret = 0;
 
+	trace_omap_device_scale(dev_name(req_dev), rate, smp_processor_id());
+
 	pdev = container_of(target_dev, struct platform_device, dev);
 	if (IS_ERR_OR_NULL(pdev)) {
 		pr_err("%s: pdev is null!\n", __func__);
@@ -985,6 +989,7 @@ int omap_device_scale(struct device *req_dev, struct device *target_dev,
 	/* Fall through */
 out:
 	mutex_unlock(&omap_dvfs_lock);
+	trace_omap_device_scale(dev_name(req_dev), -1, smp_processor_id());
 	return ret;
 }
 EXPORT_SYMBOL(omap_device_scale);

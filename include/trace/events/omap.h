@@ -57,6 +57,13 @@ DECLARE_EVENT_CLASS(omap,
 );
 
 
+DEFINE_EVENT(omap, omap_device_scale,
+
+	TP_PROTO(const char *name, unsigned int state, unsigned int cpu_id),
+
+	TP_ARGS(name, state, cpu_id)
+);
+
 #endif /* _TRACE_OMAP_H */
 
 #include <trace/define_trace.h>
