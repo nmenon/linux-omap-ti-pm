@@ -1,6 +1,8 @@
 #include <linux/kernel.h>
 #include <linux/init.h>
 
+#include <trace/events/omap.h>
+
 #include <plat/common.h>
 
 #include "voltage.h"
@@ -117,6 +119,19 @@ int omap_vp_update_errorgain(struct voltagedomain *voltdm,
 	return 0;
 }
 
+#define OMAP_VP_TRACE_START		0
+#define OMAP_VP_TRACE_PRE_SCALE_START	0
+#define OMAP_VP_TRACE_PRE_SCALE_END	1
+#define OMAP_VP_TRACE_TXDONE1_START	1
+#define OMAP_VP_TRACE_TXDONE1_END	2
+#define OMAP_VP_TRACE_TXDONE2_START	3
+#define OMAP_VP_TRACE_TXDONE2_END	4
+#define OMAP_VP_TRACE_POST_SCALE_START	4
+#define OMAP_VP_TRACE_POST_SCALE_END	5
+#define OMAP_VP_TRACE_TXDONE3_START	5
+#define OMAP_VP_TRACE_TXDONE3_END	6
+#define OMAP_VP_TRACE_END		-1
+
 /* VP force update method of voltage scaling */
 int omap_vp_forceupdate_scale(struct voltagedomain *voltdm,
 			      unsigned long target_volt)
@@ -126,10 +141,14 @@ int omap_vp_forceupdate_scale(struct voltagedomain *voltdm,
 	u8 target_vsel, current_vsel;
 	int ret, timeout = 0;
 
+	trace_omap_vp_forceupdate_scale(voltdm->name, target_volt,
+			OMAP_VP_TRACE_START,  smp_processor_id());
 	ret = omap_vc_pre_scale(voltdm, target_volt, &target_vsel, &current_vsel);
 	if (ret)
 		return ret;
 
+	trace_omap_vp_forceupdate_scale(voltdm->name, target_volt,
+			OMAP_VP_TRACE_PRE_SCALE_END,  smp_processor_id());
 	/*
 	 * Clear all pending TransactionDone interrupt/status. Typical latency
 	 * is <3us
@@ -145,6 +164,7 @@ int omap_vp_forceupdate_scale(struct voltagedomain *voltdm,
 			"Voltage change aborted", __func__, voltdm->name);
 		return -ETIMEDOUT;
 	}
+	trace_omap_vp_forceupdate_scale(voltdm->name, target_volt, OMAP_VP_TRACE_TXDONE1_END,  smp_processor_id());
 
 	/* Configure for VP-Force Update */
 	vpconfig = voltdm->read(vp->vpconfig);
@@ -168,14 +188,20 @@ int omap_vp_forceupdate_scale(struct voltagedomain *voltdm,
 	 * Depends on SMPSWAITTIMEMIN/MAX and voltage change
 	 */
 	timeout = 0;
+	trace_omap_vp_forceupdate_scale(voltdm->name, target_volt,
+			OMAP_VP_TRACE_TXDONE2_START,  smp_processor_id());
 	omap_test_timeout(vp->common->ops->check_txdone(vp->id),
 			  VP_TRANXDONE_TIMEOUT, timeout);
+	trace_omap_vp_forceupdate_scale(voltdm->name, target_volt,
+			OMAP_VP_TRACE_TXDONE2_END,  smp_processor_id());
 	if (timeout >= VP_TRANXDONE_TIMEOUT)
 		pr_err("%s: vdd_%s TRANXDONE timeout exceeded."
 			"TRANXDONE never got set after the voltage update\n",
 			__func__, voltdm->name);
 
 	omap_vc_post_scale(voltdm, target_volt, target_vsel, current_vsel);
+	trace_omap_vp_forceupdate_scale(voltdm->name, target_volt,
+			OMAP_VP_TRACE_POST_SCALE_END,  smp_processor_id());
 
 	/*
 	 * Disable TransactionDone interrupt , clear all status, clear
@@ -188,6 +214,8 @@ int omap_vp_forceupdate_scale(struct voltagedomain *voltdm,
 			break;
 		udelay(1);
 	}
+	trace_omap_vp_forceupdate_scale(voltdm->name, target_volt,
+			OMAP_VP_TRACE_TXDONE3_END,  smp_processor_id());
 
 	if (timeout >= VP_TRANXDONE_TIMEOUT)
 		pr_warning("%s: vdd_%s TRANXDONE timeout exceeded while trying"
@@ -202,6 +230,8 @@ int omap_vp_forceupdate_scale(struct voltagedomain *voltdm,
 	vpconfig &= ~vp->common->vpconfig_forceupdate;
 	voltdm->write(vpconfig, vp->vpconfig);
 
+	trace_omap_vp_forceupdate_scale(voltdm->name, target_volt,
+			OMAP_VP_TRACE_END,  smp_processor_id());
 	return 0;
 }
 

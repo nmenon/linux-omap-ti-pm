@@ -91,6 +91,13 @@ DEFINE_EVENT(omapflag, omap_voltdm_scale,
 	TP_ARGS(name, state, flags, cpu_id)
 );
 
+DEFINE_EVENT(omapflag, omap_vp_forceupdate_scale,
+
+	TP_PROTO(const char *name, unsigned int state, unsigned int flags, unsigned int cpu_id),
+
+	TP_ARGS(name, state, flags, cpu_id)
+);
+
 #endif /* _TRACE_OMAP_H */
 
 #include <trace/define_trace.h>
