@@ -26,6 +26,8 @@
 #include <linux/debugfs.h>
 #include <linux/slab.h>
 
+#include <trace/events/omap.h>
+
 #include <plat/common.h>
 
 #include "prm-regbits-34xx.h"
@@ -104,6 +106,19 @@ unsigned long omap_voltage_get_nom_volt(struct voltagedomain *voltdm)
 	return voltdm->curr_volt;
 }
 
+#define OMAP_TRACE_VOLTDM_SCALE_START		0
+#define OMAP_TRACE_VOLTDM_PRE_NOTIFIER_START	0
+#define OMAP_TRACE_VOLTDM_PRE_NOTIFIER_END	1
+#define OMAP_TRACE_VOLTDM_ABB_PRE_START		1
+#define OMAP_TRACE_VOLTDM_ABB_PRE_END		2
+#define OMAP_TRACE_VOLTDM_SCALE_ACTUAL_START	3
+#define OMAP_TRACE_VOLTDM_SCALE_ACTUAL_END	4
+#define OMAP_TRACE_VOLTDM_ABB_POST_START	4
+#define OMAP_TRACE_VOLTDM_ABB_POST_END		5
+#define OMAP_TRACE_VOLTDM_POST_NOTIFIER_START	6
+#define OMAP_TRACE_VOLTDM_POST_NOTIFIER_END	-1
+#define OMAP_TRACE_VOLTDM_SCALE_END		-1
+
 /**
  * voltdm_scale() - API to scale voltage of a particular voltage domain.
  * @voltdm: pointer to the voltage domain which is to be scaled.
@@ -129,12 +144,17 @@ int voltdm_scale(struct voltagedomain *voltdm,
 		return -ENODATA;
 	}
 
+	trace_omap_voltdm_scale(voltdm->name, target_volt,
+			OMAP_TRACE_VOLTDM_SCALE_START, smp_processor_id());
+
 	notify.voltdm = voltdm;
 	notify.target_volt = target_volt;
 
 	srcu_notifier_call_chain(&voltdm->change_notify_list,
 			OMAP_VOLTAGE_PRECHANGE,
 			(void *)&notify);
+	trace_omap_voltdm_scale(voltdm->name, target_volt,
+			OMAP_TRACE_VOLTDM_PRE_NOTIFIER_END, smp_processor_id());
 
 	if (voltdm->abb) {
 		ret = omap_ldo_abb_pre_scale(voltdm, target_volt);
@@ -142,10 +162,16 @@ int voltdm_scale(struct voltagedomain *voltdm,
 			pr_err("%s: ABB prescale failed for vdd%s: %d\n",
 				__func__, voltdm->name, ret);
 		/* Fall through */
+		trace_omap_voltdm_scale(voltdm->name, target_volt,
+				OMAP_TRACE_VOLTDM_ABB_PRE_END, smp_processor_id());
 	}
 
 	if (!ret) {
+		trace_omap_voltdm_scale(voltdm->name, target_volt,
+				OMAP_TRACE_VOLTDM_SCALE_ACTUAL_START, smp_processor_id());
 		ret = voltdm->scale(voltdm, target_volt);
+		trace_omap_voltdm_scale(voltdm->name, target_volt,
+				OMAP_TRACE_VOLTDM_SCALE_ACTUAL_END, smp_processor_id());
 		if (ret)
 			pr_err("%s: voltage scale failed for vdd%s: %d\n",
 				__func__, voltdm->name, ret);
@@ -156,15 +182,21 @@ int voltdm_scale(struct voltagedomain *voltdm,
 			if (ret)
 				pr_err("%s: ABB postscale fail for vdd%s:%d\n",
 					__func__, voltdm->name, ret);
+			trace_omap_voltdm_scale(voltdm->name, target_volt,
+					OMAP_TRACE_VOLTDM_ABB_POST_END, smp_processor_id());
 		}
 		/* Fall through */
 	}
 
 	notify.op_result = ret;
+	trace_omap_voltdm_scale(voltdm->name, target_volt,
+			OMAP_TRACE_VOLTDM_POST_NOTIFIER_START, smp_processor_id());
 	srcu_notifier_call_chain(&voltdm->change_notify_list,
 			OMAP_VOLTAGE_POSTCHANGE,
 			(void *)&notify);
 
+	trace_omap_voltdm_scale(voltdm->name, target_volt,
+			OMAP_TRACE_VOLTDM_SCALE_END, smp_processor_id());
 	return ret;
 }
 
