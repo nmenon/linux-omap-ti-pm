@@ -64,6 +64,26 @@ DEFINE_EVENT(omap, omap_device_scale,
 	TP_ARGS(name, state, cpu_id)
 );
 
+DEFINE_EVENT(omap, omap_sr_enable,
+
+	TP_PROTO(const char *name, unsigned int state, unsigned int cpu_id),
+
+	TP_ARGS(name, state, cpu_id)
+);
+
+DEFINE_EVENT(omap, omap_sr_disable,
+
+	TP_PROTO(const char *name, unsigned int state, unsigned int cpu_id),
+
+	TP_ARGS(name, state, cpu_id)
+);
+DEFINE_EVENT(omap, omap_sr_disable_reset_volt,
+
+	TP_PROTO(const char *name, unsigned int state, unsigned int cpu_id),
+
+	TP_ARGS(name, state, cpu_id)
+);
+
 #endif /* _TRACE_OMAP_H */
 
 #include <trace/define_trace.h>

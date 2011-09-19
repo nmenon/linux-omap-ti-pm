@@ -28,6 +28,8 @@
 
 #include <plat/common.h>
 
+#include <trace/events/omap.h>
+
 #include "pm.h"
 #include "smartreflex.h"
 
@@ -697,7 +699,9 @@ void omap_sr_enable(struct voltagedomain *voltdm)
 		return;
 	}
 
+	trace_omap_sr_enable(voltdm->name, 1, smp_processor_id());
 	sr_class->enable(voltdm);
+	trace_omap_sr_enable(voltdm->name, -1, smp_processor_id());
 }
 
 /**
@@ -735,7 +739,9 @@ void omap_sr_disable(struct voltagedomain *voltdm)
 		return;
 	}
 
+	trace_omap_sr_disable(voltdm->name, 0, smp_processor_id());
 	sr_class->disable(voltdm, 0);
+	trace_omap_sr_disable(voltdm->name, -1, smp_processor_id());
 }
 
 /**
@@ -773,7 +779,9 @@ void omap_sr_disable_reset_volt(struct voltagedomain *voltdm)
 		return;
 	}
 
+	trace_omap_sr_disable_reset_volt(voltdm->name, 0, smp_processor_id());
 	sr_class->disable(voltdm, 1);
+	trace_omap_sr_disable_reset_volt(voltdm->name, -1, smp_processor_id());
 }
 
 /**
