@@ -301,13 +301,22 @@ static void sr_v1_disable(struct omap_sr *sr)
 			(ERRCONFIG_MCUACCUMINTEN | ERRCONFIG_MCUVALIDINTEN |
 			ERRCONFIG_MCUBOUNDINTEN | ERRCONFIG_VPBOUNDINTEN_V1),
 			(ERRCONFIG_MCUACCUMINTST | ERRCONFIG_MCUVALIDINTST |
-			ERRCONFIG_MCUBOUNDINTST |
-			ERRCONFIG_VPBOUNDINTST_V1));
+			ERRCONFIG_MCUBOUNDINTST));
+
+	/* Wait for any pending VPBOUND interrupt status to go away */
+	omap_test_timeout(!(sr_read_reg(sr, ERRCONFIG_V1) &
+			ERRCONFIG_VPBOUNDINTST_V1), SR_DISABLE_TIMEOUT,
+			timeout);
+
+	if (timeout >= SR_DISABLE_TIMEOUT)
+		dev_warn(&sr->pdev->dev, "%s: VPBOUNDS disable timedout\n",
+			__func__);
 
 	/*
 	 * Wait for SR to be disabled.
 	 * wait until ERRCONFIG.MCUDISACKINTST = 1. Typical latency is 1us.
 	 */
+	timeout = 0;
 	omap_test_timeout((sr_read_reg(sr, ERRCONFIG_V1) &
 			ERRCONFIG_MCUDISACKINTST), SR_DISABLE_TIMEOUT,
 			timeout);
@@ -331,9 +340,22 @@ static void sr_v2_disable(struct omap_sr *sr)
 	/* SRCONFIG - disable SR */
 	sr_modify_reg(sr, SRCONFIG, SRCONFIG_SRENABLE, 0x0);
 
-	/* Disable all other SR interrupts and clear the status */
-	sr_modify_reg(sr, ERRCONFIG_V2, ERRCONFIG_VPBOUNDINTEN_V2,
-			ERRCONFIG_VPBOUNDINTST_V2);
+	/*
+	 * Disable SR to VP communication.
+	 */
+	sr_modify_reg(sr, ERRCONFIG_V2, ERRCONFIG_VPBOUNDINTEN_V2, 0x0);
+
+	/* Wait for any pending VPBOUND interrupt status to go away */
+	omap_test_timeout(!(sr_read_reg(sr, ERRCONFIG_V2) &
+			ERRCONFIG_VPBOUNDINTST_V2), SR_DISABLE_TIMEOUT,
+			timeout);
+	if (timeout >= SR_DISABLE_TIMEOUT)
+		dev_warn(&sr->pdev->dev, "%s: VPBOUNDS disable timedout\n",
+			__func__);
+
+	/*
+	 * Disable all other SR interrupts and clear the status
+	 */
 	sr_write_reg(sr, IRQENABLE_CLR, (IRQENABLE_MCUACCUMINT |
 			IRQENABLE_MCUVALIDINT |
 			IRQENABLE_MCUBOUNDSINT));
@@ -345,6 +367,7 @@ static void sr_v2_disable(struct omap_sr *sr)
 	 * Wait for SR to be disabled.
 	 * wait until IRQSTATUS.MCUDISACKINTST = 1. Typical latency is 1us.
 	 */
+	timeout = 0;
 	omap_test_timeout((sr_read_reg(sr, IRQSTATUS) &
 			IRQSTATUS_MCUDISABLEACKINT), SR_DISABLE_TIMEOUT,
 			timeout);
@@ -461,6 +484,7 @@ int sr_disable_errgen(struct voltagedomain *voltdm)
 	u32 errconfig_offs, vpboundint_en;
 	u32 vpboundint_st;
 	struct omap_sr *sr = _sr_lookup(voltdm);
+	int timeout = 0;
 
 	if (IS_ERR(sr)) {
 		pr_warning("%s: omap_sr struct for sr_%s not found\n",
@@ -484,6 +508,13 @@ int sr_disable_errgen(struct voltagedomain *voltdm)
 
 	/* Disable the interrupts of ERROR module */
 	sr_modify_reg(sr, errconfig_offs, vpboundint_en | vpboundint_st, 0);
+
+	/* Wait for any pending VPBOUND interrupt status to go away */
+	omap_test_timeout(!(sr_read_reg(sr, errconfig_offs) & vpboundint_st),
+			SR_DISABLE_TIMEOUT, timeout);
+	if (timeout >= SR_DISABLE_TIMEOUT)
+		dev_warn(&sr->pdev->dev, "%s: VPBOUNDS disable timedout\n",
+			__func__);
 
 	/* Disable the Sensor and errorgen */
 	sr_modify_reg(sr, SRCONFIG, SRCONFIG_SENENABLE | SRCONFIG_ERRGEN_EN, 0);
