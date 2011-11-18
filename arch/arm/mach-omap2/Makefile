@@ -108,10 +108,12 @@ obj-$(CONFIG_ARCH_OMAP2)		+= $(voltagedomain-common) \
 					   voltagedomains2xxx_data.o
 obj-$(CONFIG_ARCH_OMAP3)		+= $(voltagedomain-common) \
 					   voltagedomains3xxx_data.o \
-					   ldo.o ldo3xxx_data.o dvfs.o
+					   ldo.o ldo3xxx_data.o dvfs.o\
+					   dvfs-test.o
 obj-$(CONFIG_ARCH_OMAP4)		+= $(voltagedomain-common) \
 					   voltagedomains44xx_data.o \
-					   ldo.o ldo4xxx_data.o dvfs.o
+					   ldo.o ldo4xxx_data.o dvfs.o\
+					   dvfs-test.o
 endif
 
 # OMAP powerdomain framework
