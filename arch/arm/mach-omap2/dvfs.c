@@ -396,6 +396,58 @@ static int _remove_vdd_user(struct omap_vdd_dvfs_info *dvfs_info,
 }
 
 /**
+ * _check_freq_request() - Check if a requested frequency is already present
+ * @dvfs_info:	omap_vdd_dvfs_info pointer for the required vdd
+ * @req_dev:	device making the request
+ * @target_dev:	target device for which frequency request is being made
+ * @freq:	target device frequency
+ *
+ * This adds a checks if the frequency requested is already present in the list
+ *
+ * Returns 0 if not found or frequency != previous requested frequency.
+ * Returns 1 if a match is found
+ * Returns error if device does not exist in data structures.
+ */
+static int _check_freq_request(struct omap_vdd_dvfs_info *dvfs_info,
+	struct device *req_dev, struct device *target_dev, unsigned long freq)
+{
+	struct omap_dev_user_list *dev_user = NULL, *tmp_user;
+	struct omap_vdd_dev_list *temp_dev;
+	int r = 0;
+
+	if (!dvfs_info || IS_ERR(dvfs_info)) {
+		dev_warn(target_dev, "%s: VDD specified does not exist!\n",
+			__func__);
+		return -EINVAL;
+	}
+
+	list_for_each_entry(temp_dev, &dvfs_info->dev_list, node) {
+		if (temp_dev->dev == target_dev)
+			break;
+	}
+
+	if (temp_dev->dev != target_dev) {
+		dev_warn(target_dev, "%s: target_dev does not exist!\n",
+			__func__);
+		return -EINVAL;
+	}
+
+	spin_lock(&temp_dev->user_lock);
+	plist_for_each_entry(tmp_user, &temp_dev->freq_user_list, node) {
+		if (tmp_user->dev == req_dev) {
+			dev_user = tmp_user;
+			break;
+		}
+	}
+
+	if (dev_user && dev_user->node.prio == freq)
+		r = 1;
+
+	spin_unlock(&temp_dev->user_lock);
+	return r;
+}
+
+/**
  * _add_freq_request() - Add a requested device frequency
  * @dvfs_info:	omap_vdd_dvfs_info pointer for the required vdd
  * @req_dev:	device making the request
@@ -903,6 +955,18 @@ int omap_device_scale(struct device *req_dev, struct device *target_dev,
 		dev_err(target_dev, "%s: (req=%s) no vdd![f=%ld, v=%ld]\n",
 			__func__, dev_name(req_dev), freq, volt);
 		ret = -ENODEV;
+		goto out;
+	}
+
+	ret = _check_freq_request(tdvfs_info, req_dev, target_dev, freq);
+	if (ret < 0) {
+		dev_err(target_dev, "%s: freqchk(%s) failed %d[f=%ld, v=%ld]\n",
+			__func__, dev_name(req_dev), ret, freq, volt);
+		goto out;
+	}
+	/* If the requested frequency is already present, nothing more to do */
+	if (ret) {
+		ret = 0;
 		goto out;
 	}
 
