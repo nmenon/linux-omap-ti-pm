@@ -138,7 +138,7 @@ static struct omap_opp_def __initdata omap443x_opp_def_list[] = {
 	/* IVA OPP2 - OPP100 */
 	OPP_INITIALIZER("iva", "dpll_iva_m5x2_ck", "iva", true, 266100000, OMAP4430_VDD_IVA_OPP100_UV),
 	/* IVA OPP3 - OPP-Turbo */
-	OPP_INITIALIZER("iva", "dpll_iva_m5x2_ck", "iva", false, 332000000, OMAP4430_VDD_IVA_OPPTURBO_UV),
+	OPP_INITIALIZER("iva", "dpll_iva_m5x2_ck", "iva", true, 332000000, OMAP4430_VDD_IVA_OPPTURBO_UV),
 	/* SGX OPP1 - OPP50 */
 	OPP_INITIALIZER("gpu", "dpll_per_m7x2_ck", "core", true, 153600000, OMAP4430_VDD_CORE_OPP50_UV),
 	/* SGX OPP2 - OPP100 */
@@ -154,7 +154,7 @@ static struct omap_opp_def __initdata omap443x_opp_def_list[] = {
 	/* DSP OPP2 - OPP100 */
 	OPP_INITIALIZER("dsp", "dpll_iva_m4x2_ck", "iva", true, 465500000, OMAP4430_VDD_IVA_OPP100_UV),
 	/* DSP OPP3 - OPPTB */
-	OPP_INITIALIZER("dsp", "dpll_iva_m4x2_ck", "iva", false, 496000000, OMAP4430_VDD_IVA_OPPTURBO_UV),
+	OPP_INITIALIZER("dsp", "dpll_iva_m4x2_ck", "iva", true, 496000000, OMAP4430_VDD_IVA_OPPTURBO_UV),
 	/* HSI OPP1 - OPP50 */
 	OPP_INITIALIZER("hsi", "hsi_fck", "core", true, 96000000, OMAP4430_VDD_CORE_OPP50_UV),
 	/* HSI OPP2 - OPP100 */
@@ -255,12 +255,7 @@ static struct omap_opp_def __initdata omap446x_opp_def_list[] = {
 	OPP_INITIALIZER("iva", "dpll_iva_m5x2_ck", "iva", true, 133000000, OMAP4460_VDD_IVA_OPP50_UV),
 	/* IVA OPP2 - OPP100 */
 	OPP_INITIALIZER("iva", "dpll_iva_m5x2_ck", "iva", true, 266100000, OMAP4460_VDD_IVA_OPP100_UV),
-	/*
-	 * IVA OPP3 - OPP-Turbo + Disabled as the reference schematics
-	 * recommends Phoenix VCORE2 which can supply only 600mA - so the ones
-	 * above this OPP frequency, even though OMAP is capable, should be
-	 * enabled by board file which is sure of the chip power capability
-	 */
+	/* IVA OPP3 - OPP-Turbo */
 	OPP_INITIALIZER("iva", "dpll_iva_m5x2_ck", "iva", false, 332000000, OMAP4460_VDD_IVA_OPPTURBO_UV),
 	/* IVA OPP4 - OPP-Nitro */
 	OPP_INITIALIZER("iva", "dpll_iva_m5x2_ck", "iva", false, 430000000, OMAP4460_VDD_IVA_OPPNITRO_UV),
@@ -430,17 +425,28 @@ int __init omap4_opp_init(void)
 		r = omap_init_opp_table(omap446x_opp_def_list,
 			ARRAY_SIZE(omap446x_opp_def_list));
 
-	if (!r) {
-		if (omap4_has_mpu_1_2ghz())
-			omap4_opp_enable("mpu", 1200000000);
-		if (omap4_has_mpu_1_5ghz())
-			omap4_opp_enable("mpu", 1500000000);
+	if (r)
+		goto out;
+
+	/* Enable Turbo and Nitro IVA OPPs */
+	if (omap4_has_iva_430mhz()) {
+		omap4_opp_enable("iva", 332000000);
+		omap4_opp_enable("dsp", 496000000);
+		omap4_opp_enable("iva", 430000000);
 	}
+	if (omap4_has_iva_500mhz())
+		omap4_opp_enable("iva", 500000000);
+
+	if (omap4_has_mpu_1_2ghz())
+		omap4_opp_enable("mpu", 1200000000);
+	if (omap4_has_mpu_1_5ghz())
+		omap4_opp_enable("mpu", 1500000000);
 
 	/* Update ABB settings */
 	if (cpu_is_omap446x())
 		omap4460_abb_update();
 
+out:
 	return r;
 }
 device_initcall(omap4_opp_init);
