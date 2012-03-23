@@ -196,15 +196,12 @@ static int _abb_set_abb(struct voltagedomain *voltdm, int abb_type)
  * of LDO functions
  */
 static int _abb_scale(struct voltagedomain *voltdm,
-		      unsigned long target_volt, bool is_prescale)
+		      struct omap_volt_data *target_vdata, bool is_prescale)
 {
 	int ret = 0;
-	struct omap_volt_data *target_vdata;
 	int curr_abb, target_abb;
 	struct omap_ldo_abb_instance *abb;
 
-	/* get per-voltage ABB data */
-	target_vdata = omap_voltage_get_voltdata(voltdm, target_volt);
 	if (IS_ERR_OR_NULL(target_vdata)) {
 		pr_err("%s:%s: Invalid volt data tv=%p!\n", __func__,
 		       voltdm->name, target_vdata);
@@ -221,8 +218,8 @@ static int _abb_scale(struct voltagedomain *voltdm,
 	target_abb = target_vdata->abb_type;
 
 	pr_debug("%s: %s: Enter: t_v=%ld scale=%d c_abb=%d t_abb=%d ret=%d\n",
-		 __func__, voltdm->name, target_volt, is_prescale, curr_abb,
-		 target_abb, ret);
+		 __func__, voltdm->name, omap_get_nominal_voltage(target_vdata),
+		 is_prescale, curr_abb, target_abb, ret);
 
 	/* If we were'nt booting and there is no change, we get out */
 	if (target_abb == curr_abb && voltdm->curr_volt)
@@ -262,8 +259,8 @@ static int _abb_scale(struct voltagedomain *voltdm,
 
 out:
 	pr_debug("%s: %s:Exit: t_v=%ld scale=%d c_abb=%d t_abb=%d ret=%d\n",
-		 __func__, voltdm->name, target_volt, is_prescale, curr_abb,
-		 target_abb, ret);
+		 __func__, voltdm->name, omap_get_nominal_voltage(target_vdata),
+		 is_prescale, curr_abb, target_abb, ret);
 	return ret;
 
 }
@@ -271,12 +268,12 @@ out:
 /**
  * omap_ldo_abb_pre_scale() - Enable required ABB strategy before voltage scale
  * @voltdm:		voltage domain to operate on
- * @target_volt:	target voltage we moved to.
+ * @target_volt:	target voltage data we moved to.
  */
 int omap_ldo_abb_pre_scale(struct voltagedomain *voltdm,
-			   unsigned long target_volt)
+			   struct omap_volt_data *target_vdata)
 {
-	return _abb_scale(voltdm, target_volt, true);
+	return _abb_scale(voltdm, target_vdata, true);
 }
 
 /**
@@ -285,9 +282,9 @@ int omap_ldo_abb_pre_scale(struct voltagedomain *voltdm,
  * @target_volt:	target voltage we are going to
  */
 int omap_ldo_abb_post_scale(struct voltagedomain *voltdm,
-			    unsigned long target_volt)
+			    struct omap_volt_data *target_vdata)
 {
-	return _abb_scale(voltdm, target_volt, false);
+	return _abb_scale(voltdm, target_vdata, false);
 }
 
 /**
@@ -305,6 +302,7 @@ void __init omap_ldo_abb_init(struct voltagedomain *voltdm)
 	u32 settling_time;
 	u32 wait_count_val;
 	struct omap_ldo_abb_instance *abb;
+	int abb_t;
 
 	if (IS_ERR_OR_NULL(voltdm)) {
 		pr_err("%s: No voltdm?\n", __func__);
@@ -362,9 +360,27 @@ void __init omap_ldo_abb_init(struct voltagedomain *voltdm)
 	 * we cant trust the initial state based off boot voltage's volt_data
 	 * even. Not all bootloaders are nice :(
 	 */
-	abb->__cur_abb_type = (voltdm->read(abb->ctrl_reg) &
+	abb_t = (voltdm->read(abb->ctrl_reg) &
 			       abb->ctrl_bits->opp_sel_mask) >>
 				    __ffs(abb->ctrl_bits->opp_sel_mask);
+	/* convert it back to comparable values */
+	switch (abb_t) {
+	case OMAP_LDO_ABB_NOMINAL_OPP_VALUE:
+		abb_t = OMAP_ABB_NOMINAL_OPP;
+		break;
+	case OMAP_LDO_ABB_SLOW_OPP_VALUE:
+		abb_t = OMAP_ABB_SLOW_OPP;
+		break;
+	case OMAP_LDO_ABB_FAST_OPP_VALUE:
+		abb_t = OMAP_ABB_FAST_OPP;
+		break;
+	default:
+		WARN(1, "%s: voltdm %s configured with unsupported ABB 0x%02x\n",
+			__func__, voltdm->name, abb_t);
+		abb_t = OMAP_ABB_NOMINAL_OPP;
+		break;
+	}
+	abb->__cur_abb_type = abb_t;
 
 	return;
 }
