@@ -224,6 +224,10 @@ int omap_vp_forceupdate_scale(struct voltagedomain *voltdm,
 		return -ETIMEDOUT;
 	}
 
+	pr_err( "%s:XXX: vdd_%s target volt=%ld,"
+	"target vsel=0x%02x, current_vsel=0x%02x\n",
+	__func__, voltdm->name, target_volt,
+	target_vsel, current_vsel);
 	/* Configure for VP-Force Update */
 	vpconfig = voltdm->read(vp->vpconfig);
 	vpconfig &= ~(vp->common->vpconfig_initvdd |

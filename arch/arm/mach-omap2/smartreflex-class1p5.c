@@ -156,6 +156,8 @@ static void sr_class1p5_calib_work(struct work_struct *work)
 	 * 1.5 disable was called.
 	 */
 	if (!mutex_trylock(&omap_dvfs_lock)) {
+		pr_err("%s:XXX: ooops.. rescheduling %s?\n", __func__,
+			(work_data->voltdm)? work_data->voltdm->name :"NONE??");
 		schedule_delayed_work(&work_data->work,
 				      msecs_to_jiffies(SR1P5_SAMPLING_DELAY_MS *
 						       SR1P5_STABLE_SAMPLES));
@@ -182,7 +184,7 @@ static void sr_class1p5_calib_work(struct work_struct *work)
 	/* if we are triggered first time, we need to start isr to sample */
 	if (work_data->num_calib_triggers == 1) {
 		/* We could be interrupted many times, so, only for debug */
-		pr_debug("%s: %s: Calibration start: Voltage Nominal=%d\n",
+		pr_err("%s:XXX: %s: Calibration start: Voltage Nominal=%d\n",
 			 __func__, voltdm->name, volt_data->volt_nominal);
 		goto start_sampling;
 	}
@@ -210,6 +212,11 @@ static void sr_class1p5_calib_work(struct work_struct *work)
 
 	/* we have potential oscillations/first sample */
 start_sampling:
+	pr_info("%s:XXX: %s: Calibration start: Voltage:Nominal=%d,"
+		"Calib=%d,margin=%d triggers=%d\n",
+		 __func__, voltdm->name, volt_data->volt_nominal,
+		 volt_data->volt_calibrated, volt_data->volt_margin,
+		 work_data->num_calib_triggers);
 	work_data->num_osc_samples = 0;
 
 	/* Clear transdone events so that we can go on. */
@@ -260,7 +267,7 @@ stop_sampling:
 	u_volt_safe = u_volt_current;
 	/* Grab the max of the samples as the stable voltage */
 	for (; idx >= 0; idx--) {
-		pr_debug("%s: osc_v[%d]=%ld, safe_v=%ld\n", __func__, idx,
+		pr_err("%s:XXX: osc_v[%d]=%ld, safe_v=%ld\n", __func__, idx,
 			work_data->u_volt_samples[idx], u_volt_safe);
 		if (work_data->u_volt_samples[idx] > u_volt_safe)
 			u_volt_safe = work_data->u_volt_samples[idx];
@@ -272,6 +279,11 @@ stop_sampling:
 
 	/* Fall through to close up common stuff */
 done_calib:
+	pr_info("%s:XXX: %s: Calibration done: Voltage:Nominal=%d,"
+		"Calib=%d,margin=%d triggers=%d\n",
+		 __func__, voltdm->name, volt_data->volt_nominal,
+		 volt_data->volt_calibrated, volt_data->volt_margin,
+		 work_data->num_calib_triggers);
 	sr_disable_errgen(voltdm);
 	omap_vp_disable(voltdm);
 	sr_disable(voltdm);
@@ -434,8 +446,10 @@ static int sr_class1p5_enable(struct voltagedomain *voltdm,
 		return -EINVAL;
 	}
 
-	if (work_data->work_active)
+	if (work_data->work_active) {
+		pr_err("%s:XXX:%s work active\n", __func__, voltdm->name);
 		return 0;
+	}
 
 	omap_vp_enable(voltdm);
 	r = sr_enable(voltdm, volt_data);
@@ -454,6 +468,7 @@ static int sr_class1p5_enable(struct voltagedomain *voltdm,
 	schedule_delayed_work(&work_data->work,
 			      msecs_to_jiffies(SR1P5_SAMPLING_DELAY_MS *
 					       SR1P5_STABLE_SAMPLES));
+	pr_err("%s:XXX:%s SR enabled\n", __func__, voltdm->name);
 
 	return 0;
 }
@@ -520,6 +535,7 @@ static int sr_class1p5_disable(struct voltagedomain *voltdm,
 		sr_disable(voltdm);
 		/* Cancelled SR, so no more need to keep request */
 		pm_qos_update_request(&work_data->qos, PM_QOS_DEFAULT_VALUE);
+		pr_err("%s:XXX:%s SR cancelled\n", __func__, voltdm->name);
 	}
 
 	/* If already calibrated, don't need to reset voltage */

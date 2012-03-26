@@ -166,6 +166,8 @@ static int _abb_set_abb(struct voltagedomain *voltdm, int abb_type)
 		return -EINVAL;
 	}
 
+	pr_err("%s:XXX: voltage domain %s: abb type %d!\n",
+			 __func__, voltdm->name, abb_type);
 	/* program next state of ABB ldo */
 	voltdm->rmw(abb->ctrl_bits->opp_sel_mask,
 		    abb_val << __ffs(abb->ctrl_bits->opp_sel_mask),

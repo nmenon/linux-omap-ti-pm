@@ -850,6 +850,8 @@ static int _dvfs_scale(struct device *req_dev, struct device *target_dev,
 			continue;
 		}
 
+		dev_err(dev, "%s:XXX: clk %s set rate frq=%ld\n",
+				__func__, temp_dev->clk->name, freq);
 		r = clk_set_rate(temp_dev->clk, freq);
 		if (r < 0) {
 			dev_err(dev, "%s: clk set rate frq=%ld failed(%d)\n",
@@ -949,6 +951,7 @@ int omap_device_scale(struct device *req_dev, struct device *target_dev,
 
 	/* Lock me to ensure cross domain scaling is secure */
 	mutex_lock(&omap_dvfs_lock);
+	dev_err(target_dev, "%s:XXX: %ld START\n", __func__, rate);
 	/* I would like CPU to be active always at this point */
 	pm_qos_update_request(&omap_dvfs_pm_qos_handle, 1);
 
@@ -1040,6 +1043,7 @@ int omap_device_scale(struct device *req_dev, struct device *target_dev,
 out:
 	/* Remove the latency requirement */
 	pm_qos_update_request(&omap_dvfs_pm_qos_handle, PM_QOS_DEFAULT_VALUE);
+	dev_err(target_dev, "%s:XXX: %ld END\n", __func__, rate);
 	mutex_unlock(&omap_dvfs_lock);
 	return ret;
 }
