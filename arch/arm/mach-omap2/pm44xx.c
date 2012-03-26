@@ -1402,7 +1402,7 @@ static int __init omap4_pm_init(void)
 		clk = oh->_clk;
 		dev = &oh->od->pdev.dev;
 		/* Get the current rate */
-		rate = 0;
+		rate = clk_get_rate(clk);
 
 		/* Update DVFS framework with rate information */
 		ret = omap_device_scale(dev, dev, rate);
