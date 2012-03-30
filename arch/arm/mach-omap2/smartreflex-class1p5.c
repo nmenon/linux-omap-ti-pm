@@ -64,6 +64,7 @@ struct sr_class1p5_work_data {
 	u8 num_osc_samples;
 	unsigned long u_volt_samples[SR1P5_STABLE_SAMPLES];
 	bool work_active;
+	bool mode3p5;
 	struct pm_qos_request_list qos;
 };
 
@@ -72,6 +73,7 @@ struct sr_class1p5_work_data {
 static struct delayed_work recal_work;
 #endif
 
+static bool mode3p5;
 /**
  * sr_class1p5_notify() - isr notifier for status events
  * @voltdm:	voltage domain for which we were triggered
@@ -173,7 +175,8 @@ static void sr_class1p5_calib_work(struct work_struct *work)
 		pr_err("%s:%s unplanned work invocation!\n", __func__,
 		       voltdm->name);
 		/* No expectation of calibration, remove qos req */
-		pm_qos_update_request(&work_data->qos, PM_QOS_DEFAULT_VALUE);
+		if (!work_data->mode3p5)
+			pm_qos_update_request(&work_data->qos, PM_QOS_DEFAULT_VALUE);
 		mutex_unlock(&omap_dvfs_lock);
 		return;
 	}
@@ -284,9 +287,11 @@ done_calib:
 		 __func__, voltdm->name, volt_data->volt_nominal,
 		 volt_data->volt_calibrated, volt_data->volt_margin,
 		 work_data->num_calib_triggers);
-	sr_disable_errgen(voltdm);
-	omap_vp_disable(voltdm);
-	sr_disable(voltdm);
+	if (!work_data->mode3p5) {
+		sr_disable_errgen(voltdm);
+		omap_vp_disable(voltdm);
+		sr_disable(voltdm);
+	}
 
 	/* Add margin if needed */
 	if (volt_data->volt_margin) {
@@ -321,6 +326,8 @@ done_calib:
 	volt_data->volt_calibrated = u_volt_safe;
 	/* Setup my dynamic voltage for the next calibration for this opp */
 	volt_data->volt_dynamic_nominal = omap_get_dyn_nominal(volt_data);
+	if (work_data->mode3p5)
+		volt_data->volt_calibrated =  0;
 
 	/*
 	 * if the voltage we decided as safe is not the current voltage,
@@ -332,10 +339,13 @@ done_calib:
 		voltdm_scale(voltdm, volt_data);
 	}
 
-	pr_info("%s: %s: Calibration complete: Voltage:Nominal=%d,"
-		"Calib=%d,margin=%d\n",
-		 __func__, voltdm->name, volt_data->volt_nominal,
-		 volt_data->volt_calibrated, volt_data->volt_margin);
+	if (!work_data->mode3p5) {
+		pr_info("%s: %s: Calibration complete: Voltage:Nominal=%d,"
+			"Calib=%d,margin=%d\n",
+			 __func__, voltdm->name, volt_data->volt_nominal,
+			 volt_data->volt_calibrated, volt_data->volt_margin);
+	}
+
 	/*
 	 * TODO: Setup my wakeup voltage to allow immediate going to OFF and
 	 * on - Pending twl and voltage layer cleanups.
@@ -345,7 +355,8 @@ done_calib:
 	 */
 	work_data->work_active = false;
 	/* Calibration done, Remove qos req */
-	pm_qos_update_request(&work_data->qos, PM_QOS_DEFAULT_VALUE);
+	if (!work_data->mode3p5)
+		pm_qos_update_request(&work_data->qos, PM_QOS_DEFAULT_VALUE);
 	mutex_unlock(&omap_dvfs_lock);
 }
 
@@ -436,15 +447,15 @@ static int sr_class1p5_enable(struct voltagedomain *voltdm,
 		return -EINVAL;
 	}
 
-	/* If already calibrated, nothing to do here.. */
-	if (volt_data->volt_calibrated)
-		return 0;
-
 	work_data = (struct sr_class1p5_work_data *)voltdm_cdata;
 	if (IS_ERR_OR_NULL(work_data)) {
 		pr_err("%s: bad work data??\n", __func__);
 		return -EINVAL;
 	}
+
+	/* If already calibrated, nothing to do here.. */
+	if (!work_data->mode3p5 && volt_data->volt_calibrated)
+		return 0;
 
 	if (work_data->work_active) {
 		pr_err("%s:XXX:%s work active\n", __func__, voltdm->name);
@@ -463,7 +474,8 @@ static int sr_class1p5_enable(struct voltagedomain *voltdm,
 	work_data->work_active = true;
 	work_data->num_calib_triggers = 0;
 	/* Dont interrupt me untill calibration is complete */
-	pm_qos_update_request(&work_data->qos, 1);
+	if (!work_data->mode3p5)
+		pm_qos_update_request(&work_data->qos, 1);
 	/* program the workqueue and leave it to calibrate offline.. */
 	schedule_delayed_work(&work_data->work,
 			      msecs_to_jiffies(SR1P5_SAMPLING_DELAY_MS *
@@ -523,9 +535,6 @@ static int sr_class1p5_disable(struct voltagedomain *voltdm,
 		return -EINVAL;
 	}
 	if (work_data->work_active) {
-		/* if volt reset and work is active, we dont allow this */
-		if (is_volt_reset)
-			return -EBUSY;
 		/* flag work is dead and remove the old work */
 		work_data->work_active = false;
 		cancel_delayed_work_sync(&work_data->work);
@@ -534,12 +543,13 @@ static int sr_class1p5_disable(struct voltagedomain *voltdm,
 		omap_vp_disable(voltdm);
 		sr_disable(voltdm);
 		/* Cancelled SR, so no more need to keep request */
-		pm_qos_update_request(&work_data->qos, PM_QOS_DEFAULT_VALUE);
+		if (!work_data->mode3p5)
+			pm_qos_update_request(&work_data->qos, PM_QOS_DEFAULT_VALUE);
 		pr_err("%s:XXX:%s SR cancelled\n", __func__, voltdm->name);
 	}
 
 	/* If already calibrated, don't need to reset voltage */
-	if (volt_data->volt_calibrated)
+	if (!work_data->mode3p5 && volt_data->volt_calibrated)
 		return 0;
 
 	if (is_volt_reset)
@@ -601,9 +611,11 @@ static int sr_class1p5_init(struct voltagedomain *voltdm,
 	}
 
 	work_data->voltdm = voltdm;
+	work_data->mode3p5 = mode3p5;
 	INIT_DELAYED_WORK_DEFERRABLE(&work_data->work, sr_class1p5_calib_work);
 	*voltdm_cdata = (void *)work_data;
-	pm_qos_add_request(&work_data->qos, PM_QOS_CPU_DMA_LATENCY,
+	if (!work_data->mode3p5)
+		pm_qos_add_request(&work_data->qos, PM_QOS_CPU_DMA_LATENCY,
 			  PM_QOS_DEFAULT_VALUE);
 
 	return 0;
@@ -653,7 +665,8 @@ static int sr_class1p5_deinit(struct voltagedomain *voltdm,
 	cancel_delayed_work_sync(&work_data->work);
 	omap_voltage_calib_reset(voltdm);
 	voltdm_reset(voltdm);
-	pm_qos_remove_request(&work_data->qos);
+	if (!work_data->mode3p5)
+		pm_qos_remove_request(&work_data->qos);
 
 	*voltdm_cdata = NULL;
 	kfree(work_data);
@@ -691,12 +704,16 @@ static int __init sr_class1p5_driver_init(void)
 	/* Enable this class only for OMAP3630 and OMAP4 */
 	if (!(cpu_is_omap3630() || cpu_is_omap44xx()))
 		return -EINVAL;
+	/* TEST: use CPU is check to enable */
+	mode3p5=true;
 
 	r = sr_register_class(&class1p5_data);
 	if (r) {
 		pr_err("SmartReflex class 1.5 driver: "
 		       "failed to register with %d\n", r);
-	} else {
+		return r;
+	}
+	if (!mode3p5) {
 #if CONFIG_OMAP_SR_CLASS1P5_RECALIBRATION_DELAY
 		INIT_DELAYED_WORK_DEFERRABLE(&recal_work,
 					     sr_class1p5_recal_work);
@@ -706,6 +723,8 @@ static int __init sr_class1p5_driver_init(void)
 #endif
 		pr_info("SmartReflex class 1.5 driver: initialized (%dms)\n",
 			CONFIG_OMAP_SR_CLASS1P5_RECALIBRATION_DELAY);
+	} else {
+		pr_info("SmartReflex class 3.5 driver: initialized \n");
 	}
 	return r;
 }
